@@ -80,4 +80,9 @@
       <Filter>assets</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\levels\level1.csv">
+      <Filter>assets</Filter>
+    </None>
+  </ItemGroup>
 </Project>

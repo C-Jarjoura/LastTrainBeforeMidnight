@@ -1,4 +1,5 @@
 #include "Game.h"
+#include "Level.h"
 
 Game::Game()
     : m_window(sf::VideoMode({ 1920,1080 }), "Dernier Metro Avant Minuit"),
@@ -8,10 +9,15 @@ Game::Game()
 
 void Game::run()
 {
+    sf::Clock clock;
+
     while (m_isRunning && m_window.isOpen())
     {
         processEvents();
-        update();
+
+        float dt = clock.restart().asSeconds();
+        update(dt);
+
         render();
     }
 }
@@ -31,15 +37,16 @@ void Game::processEvents()
     }
 }
 
-
-void Game::update()
+void Game::update(float dt)
 {
-    // update logic later
+    m_level.update(dt);
 }
 
 void Game::render()
 {
-    m_window.clear();
-    // draw later
+    m_window.clear(sf::Color::Black);
+
+    m_level.draw(m_window);
+
     m_window.display();
 }

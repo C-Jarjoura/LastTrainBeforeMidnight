@@ -167,6 +167,9 @@
     <Image Include="assets\npc\npc2.png" />
     <Image Include="assets\npc\npc3.png" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\levels\level1.csv" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

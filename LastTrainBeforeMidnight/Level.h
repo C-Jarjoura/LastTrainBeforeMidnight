@@ -2,7 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 #include "Player.h"
-#include "NPC.h"
+#include "TileMap.h"
+#include "NPC.h"        // <-- AJOUT OBLIGATOIRE
 
 class Level
 {
@@ -13,6 +14,7 @@ public:
     void draw(sf::RenderWindow& window);
 
 private:
-    Player m_player;
     std::vector<NPC*> m_npcs;
+    TileMap m_map;
+    Player m_player;
 };
