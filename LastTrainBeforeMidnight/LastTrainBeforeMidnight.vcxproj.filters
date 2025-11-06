@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="assets">
+      <UniqueIdentifier>{d52d31d3-5135-4b4d-8c81-0a4ea6adee70}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -56,5 +59,16 @@
     <ClInclude Include="NarrativeManager.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\npc1.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\npc2.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\npc3.png">
+      <Filter>assets</Filter>
+    </Image>
   </ItemGroup>
 </Project>

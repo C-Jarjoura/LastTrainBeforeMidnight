@@ -1,5 +1,4 @@
 #pragma once
-
 #include <SFML/Graphics.hpp>
 #include "Entity.h"
 
@@ -13,6 +12,6 @@ public:
 
 private:
     float m_speed;
-    sf::Sprite m_sprite;
-    sf::Texture m_texture;
+    sf::Texture m_texture;   // <-- texture first
+    sf::Sprite  m_sprite;    // <-- sprite after
 };

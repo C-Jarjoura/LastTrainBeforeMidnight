@@ -2,6 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include "Player.h"
+#include "NPC.h"
 
 class Level
 {
@@ -13,4 +14,5 @@ public:
 
 private:
     Player m_player;
+    std::vector<NPC*> m_npcs;
 };

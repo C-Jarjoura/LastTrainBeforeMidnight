@@ -1,14 +1,11 @@
 #include "Player.h"
 
-Player::Player()()
+Player::Player()
+    : m_speed(200.f),
+    m_texture("player.png"),   // SFML 3: construct texture from file
+    m_sprite(m_texture)        // SFML 3: construct sprite with texture
 {
-    m_speed = 200.f;
-
-    // Charge texture joueur (tu dois avoir un fichier player.png dans le dossier du .exe)
-    m_texture.loadFromFile("player.png");
-    m_sprite.setTexture(m_texture);
-
-    m_position = { 960.f, 540.f }; // centre écran 1920x1080
+    m_position = { 960.f, 540.f }; // center for 1920x1080
     m_sprite.setPosition(m_position);
 }
 
@@ -16,14 +13,11 @@ void Player::update(float dt)
 {
     sf::Vector2f movement(0.f, 0.f);
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::W)) // Z (physique)
-        movement.y -= m_speed * dt;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::S))
-        movement.y += m_speed * dt;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A)) // Q (physique)
-        movement.x -= m_speed * dt;
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D))
-        movement.x += m_speed * dt;
+    // ZQSD (via scancodes: W,A,S,D on the keyboard)
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::W)) movement.y -= m_speed * dt; // Z
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::S)) movement.y += m_speed * dt;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A)) movement.x -= m_speed * dt; // Q
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D)) movement.x += m_speed * dt;
 
     m_position += movement;
     m_sprite.setPosition(m_position);

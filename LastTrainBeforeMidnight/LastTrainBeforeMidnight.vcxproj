@@ -159,6 +159,11 @@
     <ClInclude Include="NPC.h" />
     <ClInclude Include="Player.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="assets\npc1.png" />
+    <Image Include="assets\npc2.png" />
+    <Image Include="assets\npc3.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
