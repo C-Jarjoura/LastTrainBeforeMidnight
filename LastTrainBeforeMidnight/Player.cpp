@@ -1,6 +1,6 @@
 #include "Player.h"
 
-Player::Player()
+Player::Player()()
 {
     m_speed = 200.f;
 
@@ -16,15 +16,12 @@ void Player::update(float dt)
 {
     sf::Vector2f movement(0.f, 0.f);
 
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::W)) // Z (AZERTY)
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::W)) // Z (physique)
         movement.y -= m_speed * dt;
-
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::S))
         movement.y += m_speed * dt;
-
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A)) // Q (AZERTY)
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::A)) // Q (physique)
         movement.x -= m_speed * dt;
-
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D))
         movement.x += m_speed * dt;
 
