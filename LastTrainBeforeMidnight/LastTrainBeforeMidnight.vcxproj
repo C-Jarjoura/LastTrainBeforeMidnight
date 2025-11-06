@@ -150,6 +150,7 @@
     <ClCompile Include="NarrativeManager.cpp" />
     <ClCompile Include="NPC.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="TileMap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.h" />
@@ -158,11 +159,13 @@
     <ClInclude Include="NarrativeManager.h" />
     <ClInclude Include="NPC.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="TileMap.h" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\npc1.png" />
-    <Image Include="assets\npc2.png" />
-    <Image Include="assets\npc3.png" />
+    <Image Include="assets\levels\tileset.png" />
+    <Image Include="assets\npc\npc1.png" />
+    <Image Include="assets\npc\npc2.png" />
+    <Image Include="assets\npc\npc3.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

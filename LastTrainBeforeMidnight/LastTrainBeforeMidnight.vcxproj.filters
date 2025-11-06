@@ -39,6 +39,9 @@
     <ClCompile Include="NarrativeManager.cpp">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
+    <ClCompile Include="TileMap.cpp">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Game.h">
@@ -59,15 +62,21 @@
     <ClInclude Include="NarrativeManager.h">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
+    <ClInclude Include="TileMap.h">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="assets\npc1.png">
+    <Image Include="assets\npc\npc1.png">
       <Filter>assets</Filter>
     </Image>
-    <Image Include="assets\npc2.png">
+    <Image Include="assets\npc\npc2.png">
       <Filter>assets</Filter>
     </Image>
-    <Image Include="assets\npc3.png">
+    <Image Include="assets\npc\npc3.png">
+      <Filter>assets</Filter>
+    </Image>
+    <Image Include="assets\levels\tileset.png">
       <Filter>assets</Filter>
     </Image>
   </ItemGroup>
