@@ -1,9 +1,6 @@
 #pragma once
-
 #include <SFML/Graphics.hpp>
 #include "Player.h"
-#include "TileMap.h"
-#include "NPC.h"        // <-- AJOUT OBLIGATOIRE
 
 class Level
 {
@@ -14,7 +11,14 @@ public:
     void draw(sf::RenderWindow& window);
 
 private:
-    std::vector<NPC*> m_npcs;
-    TileMap m_map;
+
     Player m_player;
+
+    sf::Texture m_scene1;
+    sf::Texture m_panelTex;
+
+    sf::Sprite m_sceneSprite;
+    sf::Sprite m_panelSprite;
+
+    sf::Rect<float> m_panelZone;
 };
