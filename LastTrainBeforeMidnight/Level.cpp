@@ -55,18 +55,18 @@ void Level::configureForScene(int sceneId)
         m_hasNext = true;
 
         m_panelNext.setPosition(sf::Vector2f{ 600.f,400.f });
-        m_zoneNext = sf::Rect<float>(sf::Vector2f{ 620.f,140.f }, sf::Vector2f{ 150.f * 0.45f,h });
+        m_zoneNext = sf::Rect<float>(sf::Vector2f{ 610.f,140.f }, sf::Vector2f{ 150.f * 0.45f,h });
     }
     else if (sceneId == 2)
     {
         m_hasPrev = true;
         m_hasNext = true;
 
-        m_panelPrev.setPosition(sf::Vector2f{ 620.f,360.f });
-        m_zonePrev = sf::Rect<float>(sf::Vector2f{ 620.f,0.f }, sf::Vector2f{ 150.f * 0.45f,h });
+        m_panelPrev.setPosition(sf::Vector2f{ 400.f,450.f });
+        m_zonePrev = sf::Rect<float>(sf::Vector2f{ 410.f,200.f }, sf::Vector2f{ 150.f * 0.45f,h });
 
-        m_panelNext.setPosition(sf::Vector2f{ 1080.f,360.f });
-        m_zoneNext = sf::Rect<float>(sf::Vector2f{ 1080.f,0.f }, sf::Vector2f{ 150.f * 0.45f,h });
+        m_panelNext.setPosition(sf::Vector2f{ 600.f,450.f });
+        m_zoneNext = sf::Rect<float>(sf::Vector2f{ 610.f,200.f }, sf::Vector2f{ 150.f * 0.45f,h });
     }
     else // scene 3
     {
