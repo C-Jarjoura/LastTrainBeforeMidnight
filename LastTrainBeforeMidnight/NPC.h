@@ -6,18 +6,17 @@
 class NPC : public Entity
 {
 public:
-    NPC(const std::string& textureFile, bool canMove, bool moveVertical, sf::Vector2f pos);
+    NPC(const std::string& textureFile, sf::Vector2f pos);
 
     void update(float dt) override;
     void draw(sf::RenderWindow& window) override;
 
+    void setScale(float s); // <<=== AJOUT
+
 private:
-    bool m_moveVertical; // true = vertical move, false = horizontal
-    bool m_canMove;
     float m_speed;
+    float m_animTimer = 0.f;
 
     sf::Texture m_texture;
-    sf::Sprite m_sprite;
-
-    float m_moveTimer = 0.f;
+    sf::Sprite  m_sprite;
 };

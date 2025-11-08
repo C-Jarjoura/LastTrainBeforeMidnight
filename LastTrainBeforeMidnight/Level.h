@@ -1,7 +1,11 @@
 #pragma once
+
 #include <SFML/Graphics.hpp>
-#include "Player.h"
 #include <functional>
+#include <vector>
+
+#include "Player.h"
+#include "NPC.h"
 
 class Level
 {
@@ -18,11 +22,18 @@ public:
 
 private:
     bool aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b);
+    // dans Level.h ajoute dans private:
+    float m_minX;
+    float m_maxX;
 
     const sf::Texture* m_sceneTexPtr;
 
     Player m_player;
 
+    // --- NPC
+    std::vector<NPC> m_npcs;
+
+    // --- panels
     sf::Texture m_panelTex;
     sf::Sprite  m_panelNext;
     sf::Sprite  m_panelPrev;
@@ -36,5 +47,6 @@ private:
     sf::Rect<float> m_zoneNext;
     sf::Rect<float> m_zonePrev;
 
-    float m_groundY; // <== ajouté
+    float m_groundY;
+
 };
