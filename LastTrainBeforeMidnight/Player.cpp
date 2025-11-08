@@ -20,6 +20,11 @@ Player::Player()
     );
 }
 
+void Player::setScale(float s)
+{
+    m_sprite.setScale(sf::Vector2f{ s,s });
+}
+
 void Player::setPosition(const sf::Vector2f& pos)
 {
     m_position = pos;
@@ -29,7 +34,6 @@ void Player::setPosition(const sf::Vector2f& pos)
 void Player::update(float dt)
 {
     m_lastPosition = m_position;
-
     sf::Vector2f m(0, 0);
 
     bool right = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::D);
