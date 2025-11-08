@@ -13,15 +13,20 @@ private:
     void update(float dt);
     void render();
 
-    // ---- NEW ----
-    void loadSceneTexture(int id);
+    // charge la texture correspondant à l'id (1..3, 99=end)
+    void loadSceneTexture(int id, sf::Texture& out);
 
 private:
     sf::RenderWindow m_window;
 
-    // ---- NEW ----
-    int          m_currentScene = 1;
-    sf::Texture  m_sceneTex;
+    // scène courante (1..3, 99 = end)
+    int m_currentScene = 1;
 
-    Level        m_level;
+    // texture de fond active
+    sf::Texture m_sceneTex;
+
+    // texture fin
+    sf::Texture m_sceneEndTex;
+
+    Level m_level;
 };

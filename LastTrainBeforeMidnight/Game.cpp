@@ -1,36 +1,51 @@
 ﻿#include "Game.h"
 #include <SFML/Window/Keyboard.hpp>
 
-// paths
+// chemins de scènes
 static const char* SCENE1 = "assets/scenes/scene_1.png";
 static const char* SCENE2 = "assets/scenes/scene_2.png";
 static const char* SCENE3 = "assets/scenes/scene_3.png";
+static const char* SCENE_END = "assets/scenes/scene_end.png";
 
 Game::Game()
     : m_window(sf::VideoMode({ 1920,1080 }), "Dernier Metro Avant Minuit")
 {
-    // callback du LEVEL → GAME
-    m_level.onRequestSceneTexture = [this](int newId)
+    // callback demandé par Level quand le fade est noir :
+    // -> Game charge la texture et appelle setScene()
+    m_level.onRequestSceneTexture = [this](int id)
         {
-            // on charge ici
-            loadSceneTexture(newId);
-
-            // puis on applique texture + id au Level
-            m_level.setScene(newId, m_sceneTex);
+            // charge dans m_sceneTex (ou end) puis renvoie au Level
+            if (id == 99)
+            {
+                // écran de fin
+                m_sceneEndTex = sf::Texture(SCENE_END);
+                m_level.setScene(id, m_sceneEndTex);
+                m_currentScene = 99;
+            }
+            else
+            {
+                // scène standard 1..3
+                loadSceneTexture(id, m_sceneTex);
+                m_level.setScene(id, m_sceneTex);
+                m_currentScene = id;
+            }
         };
 
-    // première scène
-    loadSceneTexture(1);
+    // fixe la station gagnante
+    m_level.setWinningStation(3);
+
+    // boot: charge la scène 1
+    loadSceneTexture(1, m_sceneTex);
+    m_currentScene = 1;
     m_level.setScene(1, m_sceneTex);
 }
 
-void Game::loadSceneTexture(int id)
+void Game::loadSceneTexture(int id, sf::Texture& out)
 {
-    m_currentScene = id;
-
-    if (id == 1)      m_sceneTex = sf::Texture(SCENE1);
-    else if (id == 2) m_sceneTex = sf::Texture(SCENE2);
-    else              m_sceneTex = sf::Texture(SCENE3);
+    if (id == 1)      out = sf::Texture(SCENE1);
+    else if (id == 2) out = sf::Texture(SCENE2);
+    else if (id == 3) out = sf::Texture(SCENE3);
+    else              out = sf::Texture(SCENE_END); // fallback
 }
 
 void Game::run()
@@ -47,14 +62,14 @@ void Game::run()
 
 void Game::processEvents()
 {
-    while (auto e = m_window.pollEvent())
+    while (auto ev = m_window.pollEvent())
     {
-        if (e->is<sf::Event::Closed>())
+        if (ev->is<sf::Event::Closed>())
             m_window.close();
 
-        if (const auto* k = e->getIf<sf::Event::KeyPressed>())
+        if (const auto* key = ev->getIf<sf::Event::KeyPressed>())
         {
-            if (k->scancode == sf::Keyboard::Scancode::Escape)
+            if (key->scancode == sf::Keyboard::Scancode::Escape)
                 m_window.close();
         }
     }

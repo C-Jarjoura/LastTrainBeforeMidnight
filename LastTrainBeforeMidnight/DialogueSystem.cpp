@@ -1,18 +1,19 @@
 #include "DialogueSystem.h"
 #include <fstream>
 
-static inline void centerDialog(sf::Text& t)
+static inline void setDialogPosition(sf::Text& t)
 {
+    // Centré en bas (1920x1080)
     auto b = t.getLocalBounds();
     t.setOrigin({ b.size.x * 0.5f, 0.f });
     t.setPosition({ 960.f, 930.f });
 }
 
 DialogueSystem::DialogueSystem(sf::Font& font)
-    : m_font(font)
-    , m_text(font, "", 32)
+    : m_text(font, "", 32)
 {
     m_text.setFillColor(sf::Color::White);
+    setDialogPosition(m_text);
 }
 
 std::vector<std::string> DialogueSystem::loadSceneDialog(int sceneId)
@@ -28,11 +29,37 @@ std::vector<std::string> DialogueSystem::loadSceneDialog(int sceneId)
     return r;
 }
 
-void DialogueSystem::startScene(int sceneId, sf::Vector2f, sf::Vector2f)
+void DialogueSystem::centerDialog(sf::Text& t)
+{
+    setDialogPosition(t);
+}
+
+void DialogueSystem::startScene(int sceneId, sf::Vector2f /*playerPos*/, sf::Vector2f /*npcPos*/)
 {
     m_lines = loadSceneDialog(sceneId);
     m_index = 0;
-    if (m_lines.empty()) { end(); return; }
+
+    if (m_lines.empty())
+    {
+        end();
+        return;
+    }
+
+    m_active = true;
+    m_text.setString(m_lines[m_index]);
+    centerDialog(m_text);
+}
+
+void DialogueSystem::startWithLines(const std::vector<std::string>& lines)
+{
+    m_lines = lines;
+    m_index = 0;
+
+    if (m_lines.empty())
+    {
+        end();
+        return;
+    }
 
     m_active = true;
     m_text.setString(m_lines[m_index]);
@@ -43,18 +70,16 @@ void DialogueSystem::advance()
 {
     if (!m_active) return;
 
-    if (m_index + 1 < (int)m_lines.size())
+    if (m_index + 1 < static_cast<int>(m_lines.size()))
     {
         ++m_index;
         m_text.setString(m_lines[m_index]);
         centerDialog(m_text);
     }
-    else end();
-}
-
-void DialogueSystem::draw(sf::RenderWindow& w)
-{
-    if (m_active) w.draw(m_text);
+    else
+    {
+        end();
+    }
 }
 
 void DialogueSystem::end()
@@ -63,4 +88,11 @@ void DialogueSystem::end()
     m_lines.clear();
     m_index = 0;
     m_text.setString("");
+    centerDialog(m_text);
+}
+
+void DialogueSystem::draw(sf::RenderWindow& w)
+{
+    if (m_active)
+        w.draw(m_text);
 }
