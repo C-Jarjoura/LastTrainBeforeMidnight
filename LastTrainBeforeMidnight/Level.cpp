@@ -1,15 +1,11 @@
 ﻿#include "Level.h"
 #include <SFML/Window/Keyboard.hpp>
-#include <fstream>
-#include <sstream>
-#include <cstdint>
 
 static constexpr float PANEL_WIDTH = 150.f;
 static constexpr float HINT_FADE_SPEED = 30.f;
-static constexpr float KEY_SCALE_PANEL = 1.7f;
-static constexpr float KEY_SCALE_NPC = 1.2f;
+
 static constexpr float NPC_ICON_Y_OFF = 0.f;
-static constexpr float PANEL_ICON_Y_OFF = -0.f;
+static constexpr float PANEL_ICON_Y_OFF = 0.f;
 
 bool Level::aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b)
 {
@@ -21,19 +17,28 @@ bool Level::aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b)
 
 Level::Level()
     : m_panelTex("assets/sprites/panel.png")
-    , m_panelNext(m_panelTex)
-    , m_panelPrev(m_panelTex)
+    , m_keyTex("assets/sprites/keyE.png")
     , m_font("assets/fonts/arial.ttf")
     , m_dialogue(m_font)
-    , m_keyTex("assets/sprites/keyE.png")
+    , m_panelNext(m_panelTex)
+    , m_panelPrev(m_panelTex)
     , m_keySpritePanel(m_keyTex)
     , m_keySpriteNPC(m_keyTex)
 {
-    m_keySpritePanel.setScale({ KEY_SCALE_PANEL,KEY_SCALE_PANEL });
-    m_keySpriteNPC.setScale({ KEY_SCALE_NPC,KEY_SCALE_NPC });
-
     m_keySpritePanel.setColor(sf::Color(255, 255, 255, 0));
     m_keySpriteNPC.setColor(sf::Color(255, 255, 255, 0));
+
+    m_fader.startFadeIn();
+}
+
+void Level::requestSceneChange(int newId)
+{
+    if (!m_sceneChangePending)
+    {
+        m_sceneChangePending = true;
+        m_nextSceneId = newId;
+        m_fader.startFadeOut();
+    }
 }
 
 void Level::setScene(int id, const sf::Texture& tex)
@@ -44,27 +49,25 @@ void Level::setScene(int id, const sf::Texture& tex)
     m_dialogue.end();
     m_npcs.clear();
 
-    const float h = 2000.f;
-
-    m_hasPrev = false;
     m_hasNext = false;
-
-    m_panelNext.setScale({ 1,1 });
-    m_panelPrev.setScale({ 1,1 });
-
-    m_player.setScale(1.f);
+    m_hasPrev = false;
 
     m_panelHintAlpha = 0;
     m_npcHintAlpha = 0;
 
+    m_player.setScale(1.f);
+
+    const float h = 2000.f;
+
     if (id == 1)
     {
         m_hasNext = true;
+
         m_panelNext.setScale({ 3,3 });
         m_panelNext.setPosition({ 550,400 });
         m_zoneNext = { {450,140},{PANEL_WIDTH,h} };
 
-        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 150.f,520.f });
+        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 150,520 });
         m_npcs.back().setScale(1.f);
 
         m_groundY = 540;
@@ -74,14 +77,16 @@ void Level::setScene(int id, const sf::Texture& tex)
     {
         m_hasPrev = true;
         m_hasNext = true;
+
         m_panelPrev.setScale({ 3,3 });
         m_panelPrev.setPosition({ 400,450 });
         m_zonePrev = { {310,200},{PANEL_WIDTH,h} };
+
         m_panelNext.setScale({ 3,3 });
         m_panelNext.setPosition({ 600,450 });
         m_zoneNext = { {510,200},{PANEL_WIDTH,h} };
 
-        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 900.f,500.f });
+        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 900,500 });
         m_npcs.back().setScale(1.f);
 
         m_groundY = 600;
@@ -90,27 +95,38 @@ void Level::setScene(int id, const sf::Texture& tex)
     else
     {
         m_hasPrev = true;
+
         m_panelPrev.setScale({ 2.5f,2.5f });
         m_panelPrev.setPosition({ 250,450 });
         m_zonePrev = { {170,200},{PANEL_WIDTH,h} };
 
-        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 480.f,500.f });
+        m_npcs.emplace_back("assets/sprites/player.png", sf::Vector2f{ 480,500 });
         m_npcs.back().setScale(0.7f);
 
         m_groundY = 700;
         m_player.setScale(0.85f);
-
         m_minX = 0; m_maxX = 1000;
     }
 }
 
 void Level::update(float dt)
 {
-    bool spaceDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Space);
+    m_fader.update(dt);
+
+    if (m_sceneChangePending && m_fader.isBlack())
+    {
+        if (onRequestSceneTexture)
+            onRequestSceneTexture(m_nextSceneId);
+
+        m_sceneChangePending = false;
+        m_fader.startFadeIn();
+    }
+
+    bool space = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Space);
     bool eDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::E);
-    bool spaceEdge = (spaceDown && !m_spaceWasDown);
+    bool spaceEdge = (space && !m_spaceWasDown);
     bool eEdge = (eDown && !m_eWasDown);
-    m_spaceWasDown = spaceDown;
+    m_spaceWasDown = space;
     m_eWasDown = eDown;
 
     if (!m_dialogue.active())
@@ -131,17 +147,15 @@ void Level::update(float dt)
 
     if (!m_dialogue.active() && eEdge)
     {
-        if (onNext && onNextStation) onNextStation();
-        else if (onPrev && onPrevStation) onPrevStation();
+        if (onNext) requestSceneChange(m_sceneId + 1);
+        else if (onPrev) requestSceneChange(m_sceneId - 1);
     }
 
-    {
-        float k = HINT_FADE_SPEED * dt;
-        int target = showPanel ? 255 : 0;
-        m_panelHintAlpha = (int)(m_panelHintAlpha + (target - m_panelHintAlpha) * k);
-        if (m_panelHintAlpha < 0)m_panelHintAlpha = 0;
-        if (m_panelHintAlpha > 255)m_panelHintAlpha = 255;
-    }
+    float k = HINT_FADE_SPEED * dt;
+    int target = showPanel ? 255 : 0;
+    m_panelHintAlpha = (int)(m_panelHintAlpha + (target - m_panelHintAlpha) * k);
+    if (m_panelHintAlpha < 0)m_panelHintAlpha = 0;
+    if (m_panelHintAlpha > 255)m_panelHintAlpha = 255;
 
     int hoverNpc = -1;
     for (int i = 0;i < (int)m_npcs.size();++i)
@@ -153,11 +167,11 @@ void Level::update(float dt)
 
     if (!m_dialogue.active())
     {
-        float k = HINT_FADE_SPEED * dt;
         if (hoverNpc >= 0)
         {
             m_npcHintAlpha = (int)(m_npcHintAlpha + (255 - m_npcHintAlpha) * k);
             if (m_npcHintAlpha > 255)m_npcHintAlpha = 255;
+
             if (eEdge)
                 m_dialogue.startScene(m_sceneId, m_player.getPosition(), m_npcs[hoverNpc].getPosition());
         }
@@ -169,17 +183,17 @@ void Level::update(float dt)
     }
     else
     {
-        float k = HINT_FADE_SPEED * dt;
         m_npcHintAlpha = (int)(m_npcHintAlpha + (0 - m_npcHintAlpha) * k);
         if (m_npcHintAlpha < 0)m_npcHintAlpha = 0;
 
-        if (spaceEdge || eEdge) m_dialogue.advance();
+        if (spaceEdge || eEdge)
+            m_dialogue.advance();
     }
 
     if (m_panelHintAlpha > 0)
     {
         auto b = onNext ? m_panelNext.getGlobalBounds() : m_panelPrev.getGlobalBounds();
-        m_keySpritePanel.setPosition({ b.position.x + b.size.x * 0.5f,b.position.y + PANEL_ICON_Y_OFF });
+        m_keySpritePanel.setPosition({ b.position.x + b.size.x * 0.5f, b.position.y + PANEL_ICON_Y_OFF });
     }
 
     if (m_npcHintAlpha > 0 && hoverNpc >= 0)
@@ -218,6 +232,7 @@ void Level::draw(sf::RenderWindow& window)
     }
 
     m_player.draw(window);
-
     m_dialogue.draw(window);
+
+    m_fader.draw(window);
 }

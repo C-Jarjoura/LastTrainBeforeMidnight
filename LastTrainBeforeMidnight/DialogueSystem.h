@@ -8,22 +8,21 @@ class DialogueSystem
 public:
     DialogueSystem(sf::Font& font);
 
-    void startScene(int sceneId, const sf::Vector2f& playerPos, const sf::Vector2f& npcPos);
+    void startScene(int sceneId, sf::Vector2f playerPos, sf::Vector2f npcPos);
     void advance();
+    void draw(sf::RenderWindow& w);
     void end();
 
-    bool active() const { return m_inDialogue; }
-
-    void draw(sf::RenderWindow& window);
+    bool active() const { return m_active; }
 
 private:
-    std::vector<std::string> loadSceneDialog(int sceneId);
-    void center();
+    std::vector<std::string> loadSceneDialog(int sceneId);  // <--- manquait ici !!!
 
 private:
-    sf::Text m_text;
+    sf::Font& m_font;
+    sf::Text  m_text;
 
-    bool m_inDialogue = false;
     std::vector<std::string> m_lines;
-    size_t m_index = 0;
+    int  m_index = 0;
+    bool m_active = false;
 };

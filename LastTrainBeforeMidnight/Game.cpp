@@ -1,66 +1,60 @@
 ﻿#include "Game.h"
 #include <SFML/Window/Keyboard.hpp>
 
-// chemins des scènes (1920x1080)
+// paths
 static const char* SCENE1 = "assets/scenes/scene_1.png";
 static const char* SCENE2 = "assets/scenes/scene_2.png";
 static const char* SCENE3 = "assets/scenes/scene_3.png";
 
 Game::Game()
     : m_window(sf::VideoMode({ 1920,1080 }), "Dernier Metro Avant Minuit")
-    , m_isRunning(true)
 {
-    // brancher les callbacks du Level -> Game
-    m_level.onNextStation = [this]()
+    // callback du LEVEL → GAME
+    m_level.onRequestSceneTexture = [this](int newId)
         {
-            if (m_currentScene < 3) loadScene(m_currentScene + 1);
-        };
-    m_level.onPrevStation = [this]()
-        {
-            if (m_currentScene > 1) loadScene(m_currentScene - 1);
+            // on charge ici
+            loadSceneTexture(newId);
+
+            // puis on applique texture + id au Level
+            m_level.setScene(newId, m_sceneTex);
         };
 
-    // charger la première scène
-    loadScene(1);
+    // première scène
+    loadSceneTexture(1);
+    m_level.setScene(1, m_sceneTex);
 }
 
-void Game::loadScene(int id)
+void Game::loadSceneTexture(int id)
 {
     m_currentScene = id;
 
-    // charger la bonne texture de fond
     if (id == 1)      m_sceneTex = sf::Texture(SCENE1);
     else if (id == 2) m_sceneTex = sf::Texture(SCENE2);
     else              m_sceneTex = sf::Texture(SCENE3);
-
-    // passer la scène au Level (par pointeur sur texture + id)
-    m_level.setScene(id, m_sceneTex);
 }
 
 void Game::run()
 {
     sf::Clock clock;
-    while (m_isRunning && m_window.isOpen())
+    while (m_window.isOpen())
     {
         processEvents();
-
-        const float dt = clock.restart().asSeconds();
+        float dt = clock.restart().asSeconds();
         update(dt);
-
         render();
     }
 }
 
 void Game::processEvents()
 {
-    while (auto event = m_window.pollEvent())
+    while (auto e = m_window.pollEvent())
     {
-        if (event->is<sf::Event::Closed>())
+        if (e->is<sf::Event::Closed>())
             m_window.close();
 
-        if (const auto* key = event->getIf<sf::Event::KeyPressed>())
+        if (const auto* k = e->getIf<sf::Event::KeyPressed>())
         {
-            if (key->scancode == sf::Keyboard::Scancode::Escape)
+            if (k->scancode == sf::Keyboard::Scancode::Escape)
                 m_window.close();
         }
     }
