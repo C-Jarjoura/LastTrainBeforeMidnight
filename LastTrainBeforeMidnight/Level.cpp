@@ -8,8 +8,8 @@ static constexpr float PANEL_WIDTH = 150.f;
 static constexpr float HINT_FADE_SPEED = 30.f;
 static constexpr float KEY_SCALE_PANEL = 1.7f;
 static constexpr float KEY_SCALE_NPC = 1.2f;
-static constexpr float NPC_ICON_Y_OFF = -40.f;
-static constexpr float PANEL_ICON_Y_OFF = -20.f;
+static constexpr float NPC_ICON_Y_OFF = 0.f;
+static constexpr float PANEL_ICON_Y_OFF = -0.f;
 
 bool Level::aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b)
 {
