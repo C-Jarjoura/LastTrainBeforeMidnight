@@ -1,12 +1,9 @@
 ﻿#include "Game.h"
 #include <SFML/Window/Keyboard.hpp>
-#include <SFML/Audio.hpp>
 
-// Exposés globaux pour autres modules
+// exposés globaux
 SoundBank* gSound = nullptr;
 sf::Music* gMusic = nullptr;
-
-// Signal volume demandé par Level (scene switch)
 float g_pendingSceneVolume = -1.f;
 
 // chemins de scènes
@@ -18,27 +15,27 @@ static const char* SCENE_END = "assets/scenes/scene_end.png";
 Game::Game()
     : m_window(sf::VideoMode({ 1920,1080 }), "Dernier Metro Avant Minuit")
 {
-    // SFX accessibles globalement
     gSound = &m_sound;
 
-    // (optionnel) sfx de menu
+    // menu UI sfx
     m_sound.load("menu_move", "assets/sfx/menu_move.wav");
     m_sound.load("menu_enter", "assets/sfx/menu_enter.wav");
 
-    // Musique : démarre dès le menu et ne s'arrête jamais (loop)
-    if (!m_music.openFromFile("assets/sfx/menu.wav"))
-    {
-        // fichier manquant : on ignore
-    }
-    else
-    {
-        m_music.setLooping(true);            // SFML3
-        m_music.setVolume(m_musicVolumeCurrent); // 60% au menu
-        m_music.play();
-    }
-    gMusic = &m_music;
+    // --- dialogue bleeps ---
+    m_sound.load("blipA", "assets/sfx/dialog_bleep1.wav");
+    m_sound.load("blipB", "assets/sfx/dialog_bleep2.wav");
+    m_sound.load("blipC", "assets/sfx/dialog_bleep3.wav");
 
-    // Level demande la prochaine texture quand l'écran est noir
+    // musique menu & jeu
+    if (m_music.openFromFile("assets/sfx/menu.wav"))
+    {
+        m_music.setLooping(true);
+        m_music.setVolume(40.f);
+        m_music.play();
+        gMusic = &m_music;
+    }
+
+    // callback Level → Game texture swap
     m_level.onRequestSceneTexture = [this](int id)
         {
             if (id == 99)
@@ -55,7 +52,6 @@ Game::Game()
             }
         };
 
-    // station gagnante
     m_level.setWinningStation(3);
 }
 
@@ -96,21 +92,13 @@ void Game::processEvents()
 
 void Game::update(float dt)
 {
-    // --- MENU ---
     if (m_state == GameState::Menu)
     {
         int r = m_menu.update(dt);
 
         if (r == 1) // jouer
         {
-            // audio : on descend vers 5% pendant la transition vers le jeu
-            m_musicVolumeTarget = 5.f;
-            m_raiseToGameplayAfterFadeIn = true; // on remontera à 30% après fade-in visuel du Level
-
-            // bascule état jeu
             m_state = GameState::Playing;
-
-            // boot scène 1
             loadSceneTexture(1, m_sceneTex);
             m_currentScene = 1;
             m_level.setScene(1, m_sceneTex);
@@ -120,41 +108,12 @@ void Game::update(float dt)
             m_window.close();
         }
 
-        // smoothing volume en menu
-        if (gMusic)
-        {
-            // approche douce (exponentielle) vers target
-            m_musicVolumeCurrent += (m_musicVolumeTarget - m_musicVolumeCurrent) * m_musicFadeSpeed * dt / 100.f;
-            gMusic->setVolume(m_musicVolumeCurrent);
-        }
-
         m_sound.garbageCollect();
         return;
     }
 
-    // --- PLAYING ---
+    // JEUX
     m_level.update(dt);
-
-    // Level peut signaler un changement de volume (scene switch -> 5%) via g_pendingSceneVolume
-    if (g_pendingSceneVolume >= 0.f)
-    {
-        m_musicVolumeTarget = g_pendingSceneVolume;
-        g_pendingSceneVolume = -1.f;
-    }
-
-    // si on vient de quitter le menu, on remontera à 30% uniquement quand le fade-in de Level est terminé
-    // On détecte la fin de fade-in en lisant le signal posé par Level (voir Level.cpp plus bas).
-    // Ici, Game ne le sait pas directement, donc Level fera : g_pendingSceneVolume = 30.f à la fin du fade-in.
-    // (pas besoin de méthode publique)
-    // => donc rien à faire ici, juste écouter g_pendingSceneVolume.
-
-    // smoothing volume en jeu
-    if (gMusic)
-    {
-        m_musicVolumeCurrent += (m_musicVolumeTarget - m_musicVolumeCurrent) * m_musicFadeSpeed * dt / 100.f;
-        gMusic->setVolume(m_musicVolumeCurrent);
-    }
-
     m_sound.garbageCollect();
 }
 

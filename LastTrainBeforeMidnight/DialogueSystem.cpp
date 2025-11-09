@@ -1,14 +1,48 @@
-#include "DialogueSystem.h"
+﻿#include "DialogueSystem.h"
 #include <fstream>
+#include <random>
+#include "SoundBank.h"
 
+// petit RNG global
+static std::mt19937 rng{ std::random_device{}() };
+
+extern SoundBank* gSound;
+
+// ----------------------------------------
 static inline void setDialogPosition(sf::Text& t)
 {
-    // Centr� en bas (1920x1080)
+    // Centré en bas (1920x1080)
     auto b = t.getLocalBounds();
     t.setOrigin({ b.size.x * 0.5f, 0.f });
     t.setPosition({ 960.f, 930.f });
 }
 
+static void playBleep()
+{
+    if (!gSound) return;
+
+    // random pitch (undertale like)
+    std::uniform_real_distribution<float> dp(0.93f, 1.06f);
+    float pitch = dp(rng);
+
+    // random sample 0..2
+    std::uniform_int_distribution<int> di(0, 2);
+    int i = di(rng);
+
+    const char* id = (i == 0) ? "blipA" : (i == 1) ? "blipB" : "blipC";
+
+    // volume autour 63% (assez prononcé mais pas trop)
+    // SoundBank ne supporte pas pitch, mais SFML3 le supporte sur sf::Sound
+    // → on doit appeler playOneShot puis modifier le dernier
+    // solution simple: juste jouer le sample (pitch empilé) :
+    gSound->playOneShot(id, 63.f);
+
+    // NOTE:
+    // SFML3 n'expose pas pitch par SoundBank pour oneshots
+    // mais on peut le faire si plus tard tu veux gérer un pool dédié aux bleeps
+}
+
+// ----------------------------------------
 DialogueSystem::DialogueSystem(sf::Font& font)
     : m_text(font, "", 32)
 {
@@ -48,6 +82,7 @@ void DialogueSystem::startScene(int sceneId, sf::Vector2f /*playerPos*/, sf::Vec
     m_active = true;
     m_text.setString(m_lines[m_index]);
     centerDialog(m_text);
+    playBleep();
 }
 
 void DialogueSystem::startWithLines(const std::vector<std::string>& lines)
@@ -64,6 +99,7 @@ void DialogueSystem::startWithLines(const std::vector<std::string>& lines)
     m_active = true;
     m_text.setString(m_lines[m_index]);
     centerDialog(m_text);
+    playBleep();
 }
 
 void DialogueSystem::advance()
@@ -75,6 +111,7 @@ void DialogueSystem::advance()
         ++m_index;
         m_text.setString(m_lines[m_index]);
         centerDialog(m_text);
+        playBleep();
     }
     else
     {
