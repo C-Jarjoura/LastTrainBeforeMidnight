@@ -8,18 +8,14 @@ class DialogueSystem
 public:
     explicit DialogueSystem(sf::Font& font);
 
-    // État
     bool active() const { return m_active; }
 
-    // Démarrages possibles
-    void startScene(int sceneId, sf::Vector2f playerPos, sf::Vector2f npcPos); // compat
-    void startWithLines(const std::vector<std::string>& lines);                // nouveau
+    void startScene(int sceneId, sf::Vector2f playerPos, sf::Vector2f npcPos);
+    void startWithLines(const std::vector<std::string>& lines);
 
-    // Avancer/terminer
     void advance();
     void end();
 
-    // Rendu
     void draw(sf::RenderWindow& w);
 
 private:

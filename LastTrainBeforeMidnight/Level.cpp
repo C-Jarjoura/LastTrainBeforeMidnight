@@ -4,10 +4,11 @@
 #include <fstream>
 #include <sstream>
 #include <cstdint>
+#include <cstdio>
 
-// Accès musique globale + signal volume pour Game
 extern sf::Music* gMusic;
-extern float g_pendingSceneVolume; // <-- Game écoute ce flag
+extern float g_pendingSceneVolume;
+
 
 static constexpr float PANEL_WIDTH = 150.f;
 
@@ -23,19 +24,25 @@ Level::Level()
     , m_font("assets/fonts/arial.ttf")
     , m_dialogue(m_font)
     , m_hintIcons(m_keySpritePanel, m_keySpriteNPC, m_keySpriteTrain)
-    , m_npcInteraction(m_dialogue)
+    , m_npcInteraction(m_dialogue, m_flags)
 {
-    // réglages visuels init
     m_hintIcons.setFadeSpeed(30.f);
     m_hintIcons.setOffsets(/*panel*/ 0.f, /*npc*/ -40.f, /*train*/ -40.f);
 
-    // fade noir d'entrée
     m_fader.startFadeIn();
 
-    // audio state (si tu utilises le duck de dialogue ici, garde-le)
     m_dialoguePrevActive = false;
     m_targetPitch = m_currentPitch = 1.f;
-    m_targetVolume = m_currentVolume = 40.f; // mets 40 si ta base jeu est 40, sinon adapte
+    m_targetVolume = m_currentVolume = 40.f;
+
+    m_timer = 300.f; // 5 min
+}
+
+void Level::startNewRun()
+{
+    m_flags.clear();
+    m_timer = 300.f;
+    m_npcInteraction.resetStages(); // <--- important (multi-flags par scène)
 }
 
 // ----------------------------------------
@@ -46,9 +53,7 @@ void Level::requestSceneChange(int newId)
         m_sceneChangePending = true;
         m_nextSceneId = newId;
 
-        // AUDIO SCENE SWITCH : descendre la musique à 5% pendant le fade-out + noir
-        g_pendingSceneVolume = 5.f;
-
+        g_pendingSceneVolume = 5.f; // baisse pendant switch
         m_fader.startFadeOut();
     }
 }
@@ -60,7 +65,7 @@ void Level::setScene(int id, const sf::Texture& tex)
     m_sceneTexPtr = &tex;
 
     // reset dialogue / npcs
-    m_npcInteraction.handleAdvance(false, false); // force close if open (no-op if closed)
+    m_npcInteraction.handleAdvance(false, false);
     while (m_dialogue.active()) m_dialogue.end();
 
     m_npcs.clear();
@@ -142,12 +147,40 @@ void Level::setScene(int id, const sf::Texture& tex)
 }
 
 // ----------------------------------------
+bool Level::allFlagsCollected() const
+{
+    static const char* KEYS[7] = {
+        "HEARD_NOISE",
+        "LOST_WATCH",
+        "LINE13_WARNING",
+        "SEEN_SHADOW",
+        "TRAIN4_FAKE",
+        "GUARD_CLOSED",
+        "FINAL_CLUE"
+    };
+    for (auto* k : KEYS)
+        if (m_flags.count(k) == 0)
+            return false;
+    return true;
+}
+
+// ----------------------------------------
 void Level::update(float dt)
 {
+    // timer (pas sur écran de fin)
+    if (m_sceneId != 99)
+    {
+        m_timer -= dt;
+        if (m_timer <= 0.f)
+        {
+            m_timer = 0.f;
+            requestSceneChange(99); // game over
+        }
+    }
+
     // fade
     m_fader.update(dt);
 
-    // si on attend un switch et qu’on est noir -> demander à Game la nouvelle texture
     if (m_sceneChangePending && m_fader.isBlack())
     {
         if (onRequestSceneTexture)
@@ -157,12 +190,12 @@ void Level::update(float dt)
         m_fader.startFadeIn();
     }
 
-    // inputs (edges)
+    // inputs
     m_input.update();
     const bool spaceEdge = m_input.spaceEdge();
     const bool eEdge = m_input.eEdge();
 
-    // gameplay (hors dialogue et hors écran de fin)
+    // gameplay
     if (!m_dialogue.active() && m_sceneId != 99)
     {
         m_player.update(dt);
@@ -173,7 +206,6 @@ void Level::update(float dt)
 
     for (auto& n : m_npcs) n.update(dt);
 
-    // rectangles
     sf::Rect<float> playerRect(m_player.getPosition(), { 32,48 });
 
     // ---- NPC interaction ----
@@ -182,13 +214,10 @@ void Level::update(float dt)
     if (!m_dialogue.active() && m_sceneId != 99)
     {
         if (hoverNpc >= 0 && eEdge)
-        {
             m_npcInteraction.tryBeginDialogue(hoverNpc, m_sceneId, m_groundY, m_player, m_npcs);
-        }
     }
     else
     {
-        // avancer/fermer
         m_npcInteraction.handleAdvance(spaceEdge, eEdge);
     }
 
@@ -208,13 +237,26 @@ void Level::update(float dt)
     bool showPanel = false, onPrev = false, onNext = false, showTrain = false;
     m_navigation.compute(playerRect, pstate, tstate, showPanel, onPrev, onNext, showTrain);
 
-    if (!m_dialogue.active() && m_sceneId != 99)
+    if (!m_dialogue.active() && m_sceneId != 99 && eEdge)
     {
-        const int decided = m_navigation.decideSceneChange(eEdge, onPrev, onNext, showTrain, m_sceneId, m_winningStation);
-        if (decided != -1) requestSceneChange(decided);
+        if (showTrain)
+        {
+            int dest = 1;
+            if (m_sceneId == m_winningStation && allFlagsCollected())
+                dest = 99;
+            requestSceneChange(dest);
+        }
+        else if (onPrev)
+        {
+            requestSceneChange(m_sceneId - 1);
+        }
+        else if (onNext)
+        {
+            requestSceneChange(m_sceneId + 1);
+        }
     }
 
-    // ---- Hint icons : anchors + update ----
+    // ---- Hints ----
     if (showPanel)
     {
         const auto& sprite = onNext ? m_panelNext : m_panelPrev;
@@ -235,27 +277,21 @@ void Level::update(float dt)
 
     m_hintIcons.update(dt, showPanel, (hoverNpc >= 0) && !m_dialogue.active(), showTrain);
 
-    // ---- AUDIO : remonter à 30% quand le fade-in visuel du Level est terminé ----
+    // ---- AUDIO : remonter à 30% quand le fade-in est terminé ----
     {
         static bool s_prevClear = false;
         const bool clearNow = (m_fader.done() && !m_fader.isBlack());
         if (clearNow && !s_prevClear)
         {
-            // Fin du fade-in -> Game remontera à 30%
             g_pendingSceneVolume = 30.f;
         }
         s_prevClear = clearNow;
     }
-
-    // (si tu as un duck volume pendant dialogue ici, garde ton code.
-    //  Il se combinera avec la cible globale via le lissage de Game.
-    //  Conseil: limite-toi à setPitch ici, et laisse Game gérer le volume global.)
 }
 
 // ----------------------------------------
 void Level::draw(sf::RenderWindow& window)
 {
-    // fond
     if (m_sceneTexPtr)
     {
         sf::Sprite bg(*m_sceneTexPtr);
@@ -263,22 +299,44 @@ void Level::draw(sf::RenderWindow& window)
         window.draw(bg);
     }
 
-    // panneaux
     if (m_hasPrev) window.draw(m_panelPrev);
     if (m_hasNext) window.draw(m_panelNext);
 
-    // NPC
     for (auto& n : m_npcs) n.draw(window);
 
-    // player (pas sur l’écran de fin)
     if (m_sceneId != 99)
         m_player.draw(window);
 
-    // icônes "E"
     m_hintIcons.draw(window);
-
-    // dialogue (sous-titres)
     m_dialogue.draw(window);
+
+    // === TIMER SFML3 (avant le fader) ===
+    if (m_sceneId != 99)
+    {
+        int t = (int)m_timer;
+        if (t < 0) t = 0;
+        int mm = t / 60;
+        int ss = t % 60;
+
+        char buf[8];
+        std::snprintf(buf, sizeof(buf), "%02d:%02d", mm, ss);
+
+
+        sf::Text txt(m_font, buf, 42);
+        txt.setFillColor(sf::Color(255, 0, 0));
+
+        auto b = txt.getLocalBounds();
+        txt.setOrigin({ b.size.x, 0.f });
+        txt.setPosition({ 1900.f, 20.f });
+
+        sf::Text sh(m_font, buf, 42);
+        sh.setFillColor(sf::Color(0, 0, 0, 150));
+        sh.setOrigin({ b.size.x, 0.f });
+        sh.setPosition({ 1902.f, 22.f });
+
+        window.draw(sh);
+        window.draw(txt);
+    }
 
     // fader en dernier
     m_fader.draw(window);

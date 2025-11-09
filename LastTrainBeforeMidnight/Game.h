@@ -18,7 +18,11 @@ private:
     void render();
     void loadSceneTexture(int id, sf::Texture& out);
 
-    enum class GameState { Menu, Playing };
+    enum class GameState
+    {
+        Menu,
+        Playing
+    };
 
 private:
     sf::RenderWindow m_window;
@@ -33,18 +37,7 @@ private:
     Level     m_level;
     MainMenu  m_menu;
 
-    // SFX courts
     SoundBank m_sound;
 
-    // Musique longue (streaming)
     sf::Music m_music;
-
-    // --- Audio fade (global musique) ---
-    // menu = 60%, scene switch = 5%, après fade-in = 30%
-    float m_musicVolumeCurrent = 60.f;
-    float m_musicVolumeTarget = 60.f;
-    float m_musicFadeSpeed = 80.f; // vitesse du lissage (approche douce)
-
-    // Quand on quitte le menu, on descend à 5%, puis on remontera à 30% après fade-in de Level
-    bool  m_raiseToGameplayAfterFadeIn = false;
 };

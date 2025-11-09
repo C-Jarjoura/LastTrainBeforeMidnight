@@ -1,2 +1,5 @@
-personne ne sort jamais de la ligne 13
-il reste combien de stations ?
+SAY:j'ai perdu ma montre...
+SETFLAG:TRAIN4_FAKE
+COND:HEARD_NOISE
+SAY:donc toi aussi tu l'as entendu...
+END_COND

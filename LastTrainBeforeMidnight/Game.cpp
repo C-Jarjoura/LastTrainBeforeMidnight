@@ -1,10 +1,11 @@
 ﻿#include "Game.h"
 #include <SFML/Window/Keyboard.hpp>
+#include <SFML/Audio.hpp>
 
 // exposés globaux
 SoundBank* gSound = nullptr;
 sf::Music* gMusic = nullptr;
-float g_pendingSceneVolume = -1.f;
+float g_pendingSceneVolume = -1.f; // < 0 = pas de cible en attente
 
 // chemins de scènes
 static const char* SCENE1 = "assets/scenes/scene_1.png";
@@ -17,20 +18,20 @@ Game::Game()
 {
     gSound = &m_sound;
 
-    // menu UI sfx
+    // SFX UI menu
     m_sound.load("menu_move", "assets/sfx/menu_move.wav");
     m_sound.load("menu_enter", "assets/sfx/menu_enter.wav");
 
-    // --- dialogue bleeps ---
+    // SFX dialogues (bleeps)
     m_sound.load("blipA", "assets/sfx/dialog_bleep1.wav");
     m_sound.load("blipB", "assets/sfx/dialog_bleep2.wav");
     m_sound.load("blipC", "assets/sfx/dialog_bleep3.wav");
 
-    // musique menu & jeu
+    // Musique longue (menu + jeu, en fond)
     if (m_music.openFromFile("assets/sfx/menu.wav"))
     {
         m_music.setLooping(true);
-        m_music.setVolume(40.f);
+        m_music.setVolume(60.f); // menu plus fort
         m_music.play();
         gMusic = &m_music;
     }
@@ -52,6 +53,7 @@ Game::Game()
             }
         };
 
+    // station gagnante
     m_level.setWinningStation(3);
 }
 
@@ -92,6 +94,29 @@ void Game::processEvents()
 
 void Game::update(float dt)
 {
+    // --- lissage volume musique global via g_pendingSceneVolume ---
+    if (gMusic && g_pendingSceneVolume >= 0.f)
+    {
+        float cur = gMusic->getVolume();
+        float target = g_pendingSceneVolume;
+
+        // vitesse de fade (pour ~0.3-0.6s ressenti)
+        const float speed = 120.f; // % par seconde
+        float step = speed * dt;
+
+        if (cur < target) cur = (cur + step < target) ? (cur + step) : target;
+        else              cur = (cur - step > target) ? (cur - step) : target;
+
+        gMusic->setVolume(cur);
+
+        if (std::abs(cur - target) < 0.5f)
+        {
+            gMusic->setVolume(target);
+            g_pendingSceneVolume = -1.f; // cible atteinte
+        }
+    }
+
+    // --- états ---
     if (m_state == GameState::Menu)
     {
         int r = m_menu.update(dt);
@@ -99,9 +124,17 @@ void Game::update(float dt)
         if (r == 1) // jouer
         {
             m_state = GameState::Playing;
+
+            // reset progression + timer du run
+            m_level.startNewRun();
+
+            // charger scène 1
             loadSceneTexture(1, m_sceneTex);
             m_currentScene = 1;
             m_level.setScene(1, m_sceneTex);
+
+            // musique plus basse pour gameplay
+            g_pendingSceneVolume = 30.f;
         }
         else if (r == 2) // quitter
         {
@@ -112,7 +145,7 @@ void Game::update(float dt)
         return;
     }
 
-    // JEUX
+    // --- jeu ---
     m_level.update(dt);
     m_sound.garbageCollect();
 }
