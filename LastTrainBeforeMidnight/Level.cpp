@@ -240,39 +240,40 @@ void Level::update(float dt)
 
     // ---- Scene Navigation (panneaux + train) ----
     
-        if (!m_dialogue.active() && m_sceneId != 99 && eEdge)
+    if (!m_dialogue.active() && m_sceneId != 99 && eEdge)
+    {
+        if (showTrain)
         {
-            if (showTrain)
+            // → ALL flags collected
+            if (allFlagsCollected())
             {
-                // scène gagnante ?
                 if (m_sceneId == m_winningStation)
                 {
-                    if (allFlagsCollected())
-                    {
-                        // GOOD END → scene 99
-                        requestSceneChange(99);
-                    }
-                    else
-                    {
-                        // mauvais train → reset boucle
-                        requestSceneChange(1);
-                    }
+                    // GOOD END
+                    requestSceneChange(99); // GOOD end (scene_end)
                 }
                 else
                 {
-                    // advancing train
-                    requestSceneChange(m_sceneId + 1);
+                    // BAD END (game_over)
+                    requestSceneChange(98);
                 }
             }
-            else if (onPrev)
+            else
             {
-                requestSceneChange(m_sceneId - 1);
-            }
-            else if (onNext)
-            {
-                requestSceneChange(m_sceneId + 1);
+                // pas tous les flags -> reset loop
+                requestSceneChange(1);
             }
         }
+        else if (onPrev)
+        {
+            requestSceneChange(m_sceneId - 1);
+        }
+        else if (onNext)
+        {
+            requestSceneChange(m_sceneId + 1);
+        }
+    }
+
 
 
     // ---- Hints ----
