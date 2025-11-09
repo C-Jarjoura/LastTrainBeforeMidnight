@@ -3,6 +3,9 @@
 #include <fstream>
 #include <sstream>
 #include <cstdint>
+#include <SFML/Audio.hpp>
+// Accès à la musique globale (sf::Music)
+extern sf::Music* gMusic;
 
 static constexpr float PANEL_WIDTH = 150.f;
 
@@ -26,6 +29,11 @@ Level::Level()
 
     // fade noir d'entrée
     m_fader.startFadeIn();
+
+    // audio state
+    m_dialoguePrevActive = false;
+    m_targetPitch = m_currentPitch = 1.f;
+    m_targetVolume = m_currentVolume = 40.f; // doit matcher Game.cpp volume initial
 }
 
 // ----------------------------------------
@@ -47,7 +55,6 @@ void Level::setScene(int id, const sf::Texture& tex)
 
     // reset dialogue / npcs
     m_npcInteraction.handleAdvance(false, false); // force close if open (no-op if closed)
-    // fermer proprement :
     while (m_dialogue.active()) m_dialogue.end();
 
     m_npcs.clear();
@@ -142,7 +149,7 @@ void Level::update(float dt)
     // fade
     m_fader.update(dt);
 
-    // switch de texture si on est noir
+    // si on attend un switch et qu’on est noir -> demander à Game la nouvelle texture
     if (m_sceneChangePending && m_fader.isBlack())
     {
         if (onRequestSceneTexture)
@@ -152,7 +159,7 @@ void Level::update(float dt)
         m_fader.startFadeIn();
     }
 
-    // input edges
+    // inputs (edges)
     m_input.update();
     const bool spaceEdge = m_input.spaceEdge();
     const bool eEdge = m_input.eEdge();
@@ -229,6 +236,33 @@ void Level::update(float dt)
     }
 
     m_hintIcons.update(dt, showPanel, (hoverNpc >= 0) && !m_dialogue.active(), showTrain);
+
+    // ---- AUDIO AMBIENCE : pitch + volume duck lissés (~200ms) ----
+    const bool dlgActive = m_dialogue.active();
+
+    if (dlgActive && !m_dialoguePrevActive)
+    {
+        // dialogue commence => psycho
+        m_targetPitch = 0.97f; // -3%
+        m_targetVolume = 28.f;  // duck (40 -> 28)
+    }
+    else if (!dlgActive && m_dialoguePrevActive)
+    {
+        // fin dialogue => retour normal
+        m_targetPitch = 1.0f;
+        m_targetVolume = 40.f;
+    }
+    m_dialoguePrevActive = dlgActive;
+
+    if (gMusic)
+    {
+        const float speed = 5.0f; // ~200ms
+        m_currentPitch += (m_targetPitch - m_currentPitch) * speed * dt;
+        m_currentVolume += (m_targetVolume - m_currentVolume) * speed * dt;
+
+        gMusic->setPitch(m_currentPitch);
+        gMusic->setVolume(m_currentVolume);
+    }
 }
 
 // ----------------------------------------

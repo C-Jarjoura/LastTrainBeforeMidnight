@@ -89,4 +89,16 @@ private:
     bool m_hasNext = false;
     bool m_hasPrev = false;
     bool m_hasTrain = false;
+
+    // --- audio ambience smoothing (dialogue) ---
+    // On ne touche pas NpcInteraction ; on lit juste l'état du DialogueSystem.
+    bool  m_dialoguePrevActive = false;
+
+    // Pitch (1.0 normal, 0.97 pendant dialogue)
+    float m_targetPitch = 1.f;
+    float m_currentPitch = 1.f;
+
+    // Volume duck (0..100), lissé : 40% normal, 28% pendant dialogue
+    float m_targetVolume = 40.f;
+    float m_currentVolume = 40.f;
 };

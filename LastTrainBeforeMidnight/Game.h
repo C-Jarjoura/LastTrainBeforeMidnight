@@ -1,6 +1,10 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+
 #include "Level.h"
+#include "MainMenu.h"
+#include "SoundBank.h"
 
 class Game
 {
@@ -12,21 +16,26 @@ private:
     void processEvents();
     void update(float dt);
     void render();
-
-    // charge la texture correspondant à l'id (1..3, 99=end)
     void loadSceneTexture(int id, sf::Texture& out);
+
+    enum class GameState { Menu, Playing };
 
 private:
     sf::RenderWindow m_window;
 
-    // scène courante (1..3, 99 = end)
+    GameState m_state = GameState::Menu;
+
     int m_currentScene = 1;
 
-    // texture de fond active
     sf::Texture m_sceneTex;
-
-    // texture fin
     sf::Texture m_sceneEndTex;
 
-    Level m_level;
+    Level     m_level;
+    MainMenu  m_menu;
+
+    // SFX courts
+    SoundBank m_sound;
+
+    // Musique longue (streaming)
+    sf::Music m_music;
 };
