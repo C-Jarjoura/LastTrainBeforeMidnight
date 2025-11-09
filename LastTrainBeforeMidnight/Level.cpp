@@ -250,6 +250,7 @@ void Level::update(float dt)
                 if (m_sceneId == m_winningStation)
                 {
                     // GOOD END
+                     m_fader.setColor(sf::Color::White);
                     requestSceneChange(99); // GOOD end (scene_end)
                 }
                 else
