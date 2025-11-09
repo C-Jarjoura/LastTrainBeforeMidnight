@@ -11,6 +11,12 @@
 #include "DialogueSystem.h"
 #include "ScreenFader.h"
 
+// widgets
+#include "HintIcons.h"
+#include "LevelInput.h"
+#include "NpcInteraction.h"
+#include "SceneNavigation.h"
+
 class Level
 {
 public:
@@ -29,14 +35,6 @@ public:
     void setWinningStation(int id) { m_winningStation = id; }
 
 private:
-    // overlap Rect<float> (position + size in SFML3)
-    bool aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b);
-
-    // dialogue
-    void beginDialogueForNpc(int npcIndex);
-    void advanceDialogue();
-    void closeDialogue();
-
     // demande un changement de scène avec fade
     void requestSceneChange(int newId);
 
@@ -66,11 +64,6 @@ private:
     sf::Font m_font;
     DialogueSystem m_dialogue;
 
-    // flags
-    bool m_hasNext = false;
-    bool m_hasPrev = false;
-    bool m_hasTrain = false;
-
     // zones (panneaux + train)
     sf::Rect<float> m_zoneNext;
     sf::Rect<float> m_zonePrev;
@@ -81,21 +74,19 @@ private:
     float m_minX = 0.f;
     float m_maxX = 1920.f;
 
-    // état dialogue
-    bool m_inDialogue = false;
-    int  m_activeNpcIndex = -1;
-
-    // input edges
-    bool m_spaceWasDown = false;
-    bool m_eWasDown = false;
-
-    // hints alpha
-    int m_panelHintAlpha = 0; // 0..255
-    int m_npcHintAlpha = 0; // 0..255
-    int m_trainHintAlpha = 0; // 0..255
-
     // fader & pending switch
     ScreenFader m_fader;
     bool  m_sceneChangePending = false;
     int   m_nextSceneId = 1;
+
+    // --- widgets ---
+    HintIcons       m_hintIcons;
+    LevelInput      m_input;
+    NpcInteraction  m_npcInteraction;
+    SceneNavigation m_navigation;
+
+    // états dérivés pour la frame
+    bool m_hasNext = false;
+    bool m_hasPrev = false;
+    bool m_hasTrain = false;
 };

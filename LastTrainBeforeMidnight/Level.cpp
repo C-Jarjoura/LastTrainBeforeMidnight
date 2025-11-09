@@ -5,37 +5,6 @@
 #include <cstdint>
 
 static constexpr float PANEL_WIDTH = 150.f;
-static constexpr float HINT_FADE_SPEED = 30.f;
-static constexpr float NPC_ICON_Y_OFF = 0.f;
-static constexpr float PANEL_ICON_Y_OFF = 0.f;
-static constexpr float TRAIN_ICON_Y_OFF = -40.f;
-
-// ----------------------------------------
-static inline std::vector<std::string> loadSceneDialog(int sceneId)
-{
-    std::vector<std::string> r;
-    std::ifstream f("assets/dialogue/scene" + std::to_string(sceneId) + ".dlg");
-    if (!f.is_open()) return r;
-    std::string line;
-    while (std::getline(f, line)) if (!line.empty()) r.push_back(line);
-    return r;
-}
-
-static inline void centerDialog(sf::Text& t)
-{
-    auto b = t.getLocalBounds();
-    t.setOrigin({ b.size.x * 0.5f, 0.f });
-    t.setPosition({ 960.f, 930.f });
-}
-
-// ----------------------------------------
-bool Level::aabbOverlap(const sf::Rect<float>& a, const sf::Rect<float>& b)
-{
-    return (a.position.x < b.position.x + b.size.x) &&
-        (a.position.x + a.size.x > b.position.x) &&
-        (a.position.y < b.position.y + b.size.y) &&
-        (a.position.y + a.size.y > b.position.y);
-}
 
 // ----------------------------------------
 Level::Level()
@@ -48,11 +17,12 @@ Level::Level()
     , m_keySpriteTrain(m_keyTex)
     , m_font("assets/fonts/arial.ttf")
     , m_dialogue(m_font)
+    , m_hintIcons(m_keySpritePanel, m_keySpriteNPC, m_keySpriteTrain)
+    , m_npcInteraction(m_dialogue)
 {
-    // icônes invisibles
-    m_keySpritePanel.setColor(sf::Color(255, 255, 255, 0));
-    m_keySpriteNPC.setColor(sf::Color(255, 255, 255, 0));
-    m_keySpriteTrain.setColor(sf::Color(255, 255, 255, 0));
+    // réglages visuels init
+    m_hintIcons.setFadeSpeed(30.f);
+    m_hintIcons.setOffsets(/*panel*/ 0.f, /*npc*/ -40.f, /*train*/ -40.f);
 
     // fade noir d'entrée
     m_fader.startFadeIn();
@@ -75,16 +45,12 @@ void Level::setScene(int id, const sf::Texture& tex)
     m_sceneId = id;
     m_sceneTexPtr = &tex;
 
-    // reset dialogue / npcs / hints
-    closeDialogue();
-    m_npcs.clear();
+    // reset dialogue / npcs
+    m_npcInteraction.handleAdvance(false, false); // force close if open (no-op if closed)
+    // fermer proprement :
+    while (m_dialogue.active()) m_dialogue.end();
 
-    m_panelHintAlpha = 0;
-    m_npcHintAlpha = 0;
-    m_trainHintAlpha = 0;
-    m_keySpritePanel.setColor(sf::Color(255, 255, 255, 0));
-    m_keySpriteNPC.setColor(sf::Color(255, 255, 255, 0));
-    m_keySpriteTrain.setColor(sf::Color(255, 255, 255, 0));
+    m_npcs.clear();
 
     // reset joueur
     m_player.setScale(1.f);
@@ -176,7 +142,7 @@ void Level::update(float dt)
     // fade
     m_fader.update(dt);
 
-    // si on attend un switch et qu’on est noir -> demander à Game la nouvelle texture
+    // switch de texture si on est noir
     if (m_sceneChangePending && m_fader.isBlack())
     {
         if (onRequestSceneTexture)
@@ -186,13 +152,10 @@ void Level::update(float dt)
         m_fader.startFadeIn();
     }
 
-    // inputs (edges)
-    bool space = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::Space);
-    bool eDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::E);
-    bool spaceEdge = (space && !m_spaceWasDown);
-    bool eEdge = (eDown && !m_eWasDown);
-    m_spaceWasDown = space;
-    m_eWasDown = eDown;
+    // input edges
+    m_input.update();
+    const bool spaceEdge = m_input.spaceEdge();
+    const bool eEdge = m_input.eEdge();
 
     // gameplay (hors dialogue et hors écran de fin)
     if (!m_dialogue.active() && m_sceneId != 99)
@@ -205,94 +168,67 @@ void Level::update(float dt)
 
     for (auto& n : m_npcs) n.update(dt);
 
+    // rectangles
     sf::Rect<float> playerRect(m_player.getPosition(), { 32,48 });
 
-    // PANNEAUX
-    bool showPanel = false, onNext = false, onPrev = false;
-    if (m_hasNext && aabbOverlap(playerRect, m_zoneNext)) { showPanel = true; onNext = true; }
-    else if (m_hasPrev && aabbOverlap(playerRect, m_zonePrev)) { showPanel = true; onPrev = true; }
-
-    if (!m_dialogue.active() && eEdge && m_sceneId != 99)
-    {
-        if (onNext) requestSceneChange(m_sceneId + 1);
-        else if (onPrev) requestSceneChange(m_sceneId - 1);
-    }
-
-    // fade panneau
-    {
-        float k = HINT_FADE_SPEED * dt;
-        int target = showPanel ? 255 : 0;
-        m_panelHintAlpha = (int)(m_panelHintAlpha + (target - m_panelHintAlpha) * k);
-        if (m_panelHintAlpha < 0) m_panelHintAlpha = 0;
-        if (m_panelHintAlpha > 255) m_panelHintAlpha = 255;
-    }
-
-    // TRAIN
-    bool showTrain = false;
-    if (m_hasTrain && aabbOverlap(playerRect, m_zoneTrain))
-        showTrain = true;
-
-    if (!m_dialogue.active() && eEdge && m_sceneId != 99 && showTrain)
-    {
-        // logique : si station gagnante -> END(99) sinon retour 1
-        int dest = (m_sceneId == m_winningStation) ? 99 : 1;
-        requestSceneChange(dest);
-    }
-
-    {
-        float k = HINT_FADE_SPEED * dt;
-        int target = showTrain ? 255 : 0;
-        m_trainHintAlpha = (int)(m_trainHintAlpha + (target - m_trainHintAlpha) * k);
-        if (m_trainHintAlpha < 0) m_trainHintAlpha = 0;
-        if (m_trainHintAlpha > 255) m_trainHintAlpha = 255;
-    }
-
-    // NPC (hover colonne)
-    int hoverNpc = -1;
-    for (int i = 0; i < (int)m_npcs.size(); ++i)
-    {
-        auto np = m_npcs[i].getPosition();
-        sf::Rect<float> npcZone({ np.x - 20, 0 }, { 40, 2000 });
-        if (aabbOverlap(playerRect, npcZone)) { hoverNpc = i; break; }
-    }
+    // ---- NPC interaction ----
+    const int hoverNpc = (m_sceneId != 99) ? m_npcInteraction.computeHoverNpc(playerRect, m_npcs) : -1;
 
     if (!m_dialogue.active() && m_sceneId != 99)
     {
-        float k = HINT_FADE_SPEED * dt;
-        if (hoverNpc >= 0)
+        if (hoverNpc >= 0 && eEdge)
         {
-            m_npcHintAlpha = (int)(m_npcHintAlpha + (255 - m_npcHintAlpha) * k);
-            if (m_npcHintAlpha > 255) m_npcHintAlpha = 255;
-
-            if (eEdge) beginDialogueForNpc(hoverNpc);
-        }
-        else
-        {
-            m_npcHintAlpha = (int)(m_npcHintAlpha + (0 - m_npcHintAlpha) * k);
-            if (m_npcHintAlpha < 0) m_npcHintAlpha = 0;
+            m_npcInteraction.tryBeginDialogue(hoverNpc, m_sceneId, m_groundY, m_player, m_npcs);
         }
     }
     else
     {
-        float k = HINT_FADE_SPEED * dt;
-        m_npcHintAlpha = (int)(m_npcHintAlpha + (0 - m_npcHintAlpha) * k);
-        if (m_npcHintAlpha < 0) m_npcHintAlpha = 0;
-
-        if (spaceEdge || eEdge) advanceDialogue();
+        // avancer/fermer
+        m_npcInteraction.handleAdvance(spaceEdge, eEdge);
     }
 
-    // positions icônes
-    if (m_panelHintAlpha > 0)
+    // ---- Scene Navigation (panneaux + train) ----
+    PanelState pstate;
+    pstate.hasPrev = m_hasPrev;
+    pstate.hasNext = m_hasNext;
+    pstate.panelPrev = &m_panelPrev;
+    pstate.panelNext = &m_panelNext;
+    pstate.zonePrev = m_zonePrev;
+    pstate.zoneNext = m_zoneNext;
+
+    TrainState tstate;
+    tstate.hasTrain = m_hasTrain;
+    tstate.zoneTrain = m_zoneTrain;
+
+    bool showPanel = false, onPrev = false, onNext = false, showTrain = false;
+    m_navigation.compute(playerRect, pstate, tstate, showPanel, onPrev, onNext, showTrain);
+
+    if (!m_dialogue.active() && m_sceneId != 99)
     {
-        auto b = onNext ? m_panelNext.getGlobalBounds() : m_panelPrev.getGlobalBounds();
-        m_keySpritePanel.setPosition({ b.position.x + b.size.x * 0.5f, b.position.y + PANEL_ICON_Y_OFF });
+        const int decided = m_navigation.decideSceneChange(eEdge, onPrev, onNext, showTrain, m_sceneId, m_winningStation);
+        if (decided != -1) requestSceneChange(decided);
     }
 
-    if (m_trainHintAlpha > 0 && showTrain)
+    // ---- Hint icons : anchors + update ----
+    if (showPanel)
     {
-        auto bx = m_zoneTrain.position.x + m_zoneTrain.size.x * 0.5f;
-        m_keySpriteTrain.setPosition({ bx, m_zoneTrain.position.y + TRAIN_ICON_Y_OFF });
+        const auto& sprite = onNext ? m_panelNext : m_panelPrev;
+        auto b = sprite.getGlobalBounds();
+        m_hintIcons.setPanelAnchor({ b.position.x + b.size.x * 0.5f, b.position.y });
     }
+
+    if (showTrain)
+    {
+        const float bx = m_zoneTrain.position.x + m_zoneTrain.size.x * 0.5f;
+        m_hintIcons.setTrainAnchor({ bx, m_zoneTrain.position.y });
+    }
+
+    if (hoverNpc >= 0)
+    {
+        m_hintIcons.setNpcAnchor(m_npcs[hoverNpc].getPosition());
+    }
+
+    m_hintIcons.update(dt, showPanel, (hoverNpc >= 0) && !m_dialogue.active(), showTrain);
 }
 
 // ----------------------------------------
@@ -313,67 +249,16 @@ void Level::draw(sf::RenderWindow& window)
     // NPC
     for (auto& n : m_npcs) n.draw(window);
 
-    // icones
-    if (m_panelHintAlpha > 0)
-    {
-        auto c = m_keySpritePanel.getColor(); c.a = (std::uint8_t)m_panelHintAlpha;
-        m_keySpritePanel.setColor(c);
-        window.draw(m_keySpritePanel);
-    }
-    if (m_trainHintAlpha > 0)
-    {
-        auto c = m_keySpriteTrain.getColor(); c.a = (std::uint8_t)m_trainHintAlpha;
-        m_keySpriteTrain.setColor(c);
-        window.draw(m_keySpriteTrain);
-    }
-    if (m_npcHintAlpha > 0)
-    {
-        auto c = m_keySpriteNPC.getColor(); c.a = (std::uint8_t)m_npcHintAlpha;
-        m_keySpriteNPC.setColor(c);
-        window.draw(m_keySpriteNPC);
-    }
-
     // player (pas sur l’écran de fin)
     if (m_sceneId != 99)
         m_player.draw(window);
+
+    // icônes "E"
+    m_hintIcons.draw(window);
 
     // dialogue (sous-titres)
     m_dialogue.draw(window);
 
     // fader en dernier
     m_fader.draw(window);
-}
-
-// ----------------------------------------
-// Dialogue
-void Level::beginDialogueForNpc(int npcIndex)
-{
-    m_activeNpcIndex = npcIndex;
-
-    // pousse légèrement le joueur à côté pour ne pas cacher le NPC
-    auto npcPos = m_npcs[npcIndex].getPosition();
-    if (m_player.getPosition().x < npcPos.x)
-        m_player.setPosition({ npcPos.x - 150.f, m_groundY });
-    else
-        m_player.setPosition({ npcPos.x + 150.f, m_groundY });
-
-    // charge lignes
-    auto lines = loadSceneDialog(m_sceneId);
-    if (lines.empty()) { closeDialogue(); return; }
-
-    m_dialogue.startWithLines(lines);
-}
-
-void Level::advanceDialogue()
-{
-    if (!m_dialogue.active()) return;
-    m_dialogue.advance();
-    if (!m_dialogue.active())
-        closeDialogue();
-}
-
-void Level::closeDialogue()
-{
-    m_dialogue.end();
-    m_activeNpcIndex = -1;
 }
