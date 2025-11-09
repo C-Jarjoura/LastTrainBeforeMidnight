@@ -125,11 +125,11 @@ void Game::update(float dt)
 
     // statiques pour endings
     static float overTimer = 4.f;   // game over auto-exit
-    static bool  winStopped = false;
+    static bool  winVolumeSet = false;
 
     // reset quand on n'est pas sur l'écran correspondant
     if (m_currentScene != 98) overTimer = 4.f;
-    if (m_currentScene != 99) winStopped = false;
+    if (m_currentScene != 99) winVolumeSet = false;
 
     if (m_state == GameState::Menu)
     {
@@ -182,24 +182,19 @@ void Game::update(float dt)
         }
     }
 
-    // --- GOOD END (99) : fade audio vers 0 et stop (reste sur l'écran) ---
+    // --- GOOD END (99) : baisse du volume mais la musique continue ---
     if (m_currentScene == 99)
     {
-        if (gMusic && !winStopped)
+        if (gMusic && !winVolumeSet)
         {
-            float v = gMusic->getVolume();
-            v -= dt * 20.f;
-            if (v <= 0.f)
+            if (gMusic->getStatus() != sf::SoundSource::Status::Playing)
             {
-                v = 0.f;
-                gMusic->setVolume(v);
-                gMusic->stop();   // choix A : stopper en endings
-                winStopped = true;
+                gMusic->setLooping(true);
+                gMusic->play();
             }
-            else
-            {
-                gMusic->setVolume(v);
-            }
+
+            g_pendingSceneVolume = 25.f;
+            winVolumeSet = true;
         }
     }
 
