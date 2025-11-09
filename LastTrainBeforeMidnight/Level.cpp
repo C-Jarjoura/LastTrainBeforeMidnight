@@ -9,7 +9,6 @@
 extern sf::Music* gMusic;
 extern float g_pendingSceneVolume;
 
-
 static constexpr float PANEL_WIDTH = 150.f;
 
 // ----------------------------------------
@@ -42,7 +41,7 @@ void Level::startNewRun()
 {
     m_flags.clear();
     m_timer = 300.f;
-    m_npcInteraction.resetStages(); // <--- important (multi-flags par scène)
+    m_npcInteraction.resetStages(); // multi-flags par scène
 }
 
 // ----------------------------------------
@@ -53,7 +52,8 @@ void Level::requestSceneChange(int newId)
         m_sceneChangePending = true;
         m_nextSceneId = newId;
 
-        g_pendingSceneVolume = 5.f; // baisse pendant switch
+        // baisse musique pendant switch (Game fera le lissage)
+        g_pendingSceneVolume = 5.f;
         m_fader.startFadeOut();
     }
 }
@@ -135,13 +135,14 @@ void Level::setScene(int id, const sf::Texture& tex)
         m_player.setScale(0.85f);
         m_minX = 0; m_maxX = 1000;
     }
-    else // 99 = END
+    else // 98/99 END SCENES
     {
         m_hasPrev = m_hasNext = m_hasTrain = false;
         m_npcs.clear();
         m_groundY = 1080.f;
         m_minX = 0; m_maxX = 1920;
 
+        // place le player hors zone
         m_player.setPosition({ 960.f, m_groundY });
     }
 }
@@ -168,13 +169,13 @@ bool Level::allFlagsCollected() const
 void Level::update(float dt)
 {
     // timer (pas sur écran de fin)
-    if (m_sceneId != 99)
+    if (m_sceneId != 98 && m_sceneId != 99)
     {
         m_timer -= dt;
         if (m_timer <= 0.f)
         {
             m_timer = 0.f;
-            requestSceneChange(99); // game over
+            requestSceneChange(98); // timer expiré -> GAME OVER
         }
     }
 
@@ -196,7 +197,7 @@ void Level::update(float dt)
     const bool eEdge = m_input.eEdge();
 
     // gameplay
-    if (!m_dialogue.active() && m_sceneId != 99)
+    if (!m_dialogue.active() && (m_sceneId != 98 && m_sceneId != 99))
     {
         m_player.update(dt);
         if (m_player.getPosition().x < m_minX) m_player.setPosition({ m_minX, m_player.getPosition().y });
@@ -209,9 +210,9 @@ void Level::update(float dt)
     sf::Rect<float> playerRect(m_player.getPosition(), { 32,48 });
 
     // ---- NPC interaction ----
-    const int hoverNpc = (m_sceneId != 99) ? m_npcInteraction.computeHoverNpc(playerRect, m_npcs) : -1;
+    const int hoverNpc = ((m_sceneId != 98 && m_sceneId != 99) ? m_npcInteraction.computeHoverNpc(playerRect, m_npcs) : -1);
 
-    if (!m_dialogue.active() && m_sceneId != 99)
+    if (!m_dialogue.active() && (m_sceneId != 98 && m_sceneId != 99))
     {
         if (hoverNpc >= 0 && eEdge)
             m_npcInteraction.tryBeginDialogue(hoverNpc, m_sceneId, m_groundY, m_player, m_npcs);
@@ -237,38 +238,62 @@ void Level::update(float dt)
     bool showPanel = false, onPrev = false, onNext = false, showTrain = false;
     m_navigation.compute(playerRect, pstate, tstate, showPanel, onPrev, onNext, showTrain);
 
-    if (!m_dialogue.active() && m_sceneId != 99 && eEdge)
-    {
-        if (showTrain)
+    // ---- Scene Navigation (panneaux + train) ----
+    
+        if (!m_dialogue.active() && m_sceneId != 99 && eEdge)
         {
-            int dest = 1;
-            if (m_sceneId == m_winningStation && allFlagsCollected())
-                dest = 99;
-            requestSceneChange(dest);
+            if (showTrain)
+            {
+                // scène gagnante ?
+                if (m_sceneId == m_winningStation)
+                {
+                    if (allFlagsCollected())
+                    {
+                        // GOOD END → scene 99
+                        requestSceneChange(99);
+                    }
+                    else
+                    {
+                        // mauvais train → reset boucle
+                        requestSceneChange(1);
+                    }
+                }
+                else
+                {
+                    // advancing train
+                    requestSceneChange(m_sceneId + 1);
+                }
+            }
+            else if (onPrev)
+            {
+                requestSceneChange(m_sceneId - 1);
+            }
+            else if (onNext)
+            {
+                requestSceneChange(m_sceneId + 1);
+            }
         }
-        else if (onPrev)
-        {
-            requestSceneChange(m_sceneId - 1);
-        }
-        else if (onNext)
-        {
-            requestSceneChange(m_sceneId + 1);
-        }
-    }
+
 
     // ---- Hints ----
     if (showPanel)
     {
         const auto& sprite = onNext ? m_panelNext : m_panelPrev;
         auto b = sprite.getGlobalBounds();
-        m_hintIcons.setPanelAnchor({ b.position.x + b.size.x * 0.5f, b.position.y });
+        m_hintIcons.setPanelAnchor({
+            b.position.x + b.size.x * 0.4f,
+            b.position.y + b.size.y * 0.2f   // centré vertical middle
+            });
     }
+
 
     if (showTrain)
     {
         const float bx = m_zoneTrain.position.x + m_zoneTrain.size.x * 0.5f;
-        m_hintIcons.setTrainAnchor({ bx, m_zoneTrain.position.y });
+        float py = m_player.getPosition().y;
+        m_hintIcons.setTrainAnchor({ bx, py  });
     }
+
 
     if (hoverNpc >= 0)
     {
@@ -277,11 +302,11 @@ void Level::update(float dt)
 
     m_hintIcons.update(dt, showPanel, (hoverNpc >= 0) && !m_dialogue.active(), showTrain);
 
-    // ---- AUDIO : remonter à 30% quand le fade-in est terminé ----
+    // ---- AUDIO : remonter à 30% quand le fade-in est terminé (scènes normales) ----
     {
         static bool s_prevClear = false;
         const bool clearNow = (m_fader.done() && !m_fader.isBlack());
-        if (clearNow && !s_prevClear)
+        if (clearNow && !s_prevClear && (m_sceneId != 98 && m_sceneId != 99))
         {
             g_pendingSceneVolume = 30.f;
         }
@@ -304,14 +329,14 @@ void Level::draw(sf::RenderWindow& window)
 
     for (auto& n : m_npcs) n.draw(window);
 
-    if (m_sceneId != 99)
+    if (m_sceneId != 98 && m_sceneId != 99)
         m_player.draw(window);
 
     m_hintIcons.draw(window);
     m_dialogue.draw(window);
 
-    // === TIMER SFML3 (avant le fader) ===
-    if (m_sceneId != 99)
+    // === TIMER ===
+    if (m_sceneId != 98 && m_sceneId != 99)
     {
         int t = (int)m_timer;
         if (t < 0) t = 0;
@@ -321,16 +346,15 @@ void Level::draw(sf::RenderWindow& window)
         char buf[8];
         std::snprintf(buf, sizeof(buf), "%02d:%02d", mm, ss);
 
-
         sf::Text txt(m_font, buf, 42);
-        txt.setFillColor(sf::Color(255, 0, 0));
+        txt.setFillColor(sf::Color((std::uint8_t)255, (std::uint8_t)0, (std::uint8_t)0));
 
         auto b = txt.getLocalBounds();
         txt.setOrigin({ b.size.x, 0.f });
         txt.setPosition({ 1900.f, 20.f });
 
         sf::Text sh(m_font, buf, 42);
-        sh.setFillColor(sf::Color(0, 0, 0, 150));
+        sh.setFillColor(sf::Color((std::uint8_t)0, (std::uint8_t)0, (std::uint8_t)0, (std::uint8_t)150));
         sh.setOrigin({ b.size.x, 0.f });
         sh.setPosition({ 1902.f, 22.f });
 
@@ -338,6 +362,6 @@ void Level::draw(sf::RenderWindow& window)
         window.draw(txt);
     }
 
-    // fader en dernier
     m_fader.draw(window);
 }
+

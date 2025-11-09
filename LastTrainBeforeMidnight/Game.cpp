@@ -1,6 +1,7 @@
 ﻿#include "Game.h"
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Audio.hpp>
+#include <cmath>
 
 // exposés globaux
 SoundBank* gSound = nullptr;
@@ -11,7 +12,8 @@ float g_pendingSceneVolume = -1.f; // < 0 = pas de cible en attente
 static const char* SCENE1 = "assets/scenes/scene_1.png";
 static const char* SCENE2 = "assets/scenes/scene_2.png";
 static const char* SCENE3 = "assets/scenes/scene_3.png";
-static const char* SCENE_END = "assets/scenes/scene_end.png";
+static const char* SCENE_END = "assets/scenes/scene_end.png";   // GOOD END (99)
+static const char* SCENE_GAMEOVER = "assets/scenes/game_over.png";   // BAD  END (98)
 
 Game::Game()
     : m_window(sf::VideoMode({ 1920,1080 }), "Dernier Metro Avant Minuit")
@@ -39,11 +41,17 @@ Game::Game()
     // callback Level → Game texture swap
     m_level.onRequestSceneTexture = [this](int id)
         {
-            if (id == 99)
+            if (id == 99) // GOOD END
             {
                 m_sceneEndTex = sf::Texture(SCENE_END);
                 m_level.setScene(id, m_sceneEndTex);
                 m_currentScene = 99;
+            }
+            else if (id == 98) // GAME OVER
+            {
+                m_sceneEndTex = sf::Texture(SCENE_GAMEOVER);
+                m_level.setScene(id, m_sceneEndTex);
+                m_currentScene = 98;
             }
             else
             {
@@ -94,13 +102,12 @@ void Game::processEvents()
 
 void Game::update(float dt)
 {
-    // --- lissage volume musique global via g_pendingSceneVolume ---
+    // lissage volume musique global via g_pendingSceneVolume
     if (gMusic && g_pendingSceneVolume >= 0.f)
     {
         float cur = gMusic->getVolume();
         float target = g_pendingSceneVolume;
 
-        // vitesse de fade (pour ~0.3-0.6s ressenti)
         const float speed = 120.f; // % par seconde
         float step = speed * dt;
 
@@ -116,7 +123,14 @@ void Game::update(float dt)
         }
     }
 
-    // --- états ---
+    // statiques pour endings
+    static float overTimer = 4.f;   // game over auto-exit
+    static bool  winStopped = false;
+
+    // reset quand on n'est pas sur l'écran correspondant
+    if (m_currentScene != 98) overTimer = 4.f;
+    if (m_currentScene != 99) winStopped = false;
+
     if (m_state == GameState::Menu)
     {
         int r = m_menu.update(dt);
@@ -147,6 +161,48 @@ void Game::update(float dt)
 
     // --- jeu ---
     m_level.update(dt);
+
+    // --- GAME OVER (98) : fade audio vers 0 puis fermeture fenêtre après 4 sec ---
+    if (m_currentScene == 98)
+    {
+        overTimer -= dt;
+
+        if (gMusic)
+        {
+            float v = gMusic->getVolume();
+            v -= dt * 20.f; // fade ~3s
+            if (v < 0.f) v = 0.f;
+            gMusic->setVolume(v);
+        }
+
+        if (overTimer <= 0.f)
+        {
+            m_window.close();
+            return;
+        }
+    }
+
+    // --- GOOD END (99) : fade audio vers 0 et stop (reste sur l'écran) ---
+    if (m_currentScene == 99)
+    {
+        if (gMusic && !winStopped)
+        {
+            float v = gMusic->getVolume();
+            v -= dt * 20.f;
+            if (v <= 0.f)
+            {
+                v = 0.f;
+                gMusic->setVolume(v);
+                gMusic->stop();   // choix A : stopper en endings
+                winStopped = true;
+            }
+            else
+            {
+                gMusic->setVolume(v);
+            }
+        }
+    }
+
     m_sound.garbageCollect();
 }
 
