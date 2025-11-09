@@ -33,6 +33,8 @@ public:
 
     // fixe la station gagnante (par défaut 3)
     void setWinningStation(int id) { m_winningStation = id; }
+    // indique si le fade-in visuel du level est fini (écran pleinement visible)
+    bool isFadeInDone() const;
 
 private:
     // demande un changement de scène avec fade

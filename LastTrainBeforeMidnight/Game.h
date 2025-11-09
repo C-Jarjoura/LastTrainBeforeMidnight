@@ -38,4 +38,13 @@ private:
 
     // Musique longue (streaming)
     sf::Music m_music;
+
+    // --- Audio fade (global musique) ---
+    // menu = 60%, scene switch = 5%, après fade-in = 30%
+    float m_musicVolumeCurrent = 60.f;
+    float m_musicVolumeTarget = 60.f;
+    float m_musicFadeSpeed = 80.f; // vitesse du lissage (approche douce)
+
+    // Quand on quitte le menu, on descend à 5%, puis on remontera à 30% après fade-in de Level
+    bool  m_raiseToGameplayAfterFadeIn = false;
 };
