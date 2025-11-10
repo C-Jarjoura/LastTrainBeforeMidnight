@@ -24,12 +24,16 @@ Level::Level()
     , m_dialogue(m_font)
     , m_hintIcons(m_keySpritePanel, m_keySpriteNPC, m_keySpriteTrain)
     , m_npcInteraction(m_dialogue, m_flags)
+    , m_endingPlayerTexture("assets/sprites/player.png")
+    , m_endingPlayerSprite(m_endingPlayerTexture)
 {
     m_hintIcons.setFadeSpeed(30.f);
     m_hintIcons.setOffsets(/*panel*/ 0.f, /*npc*/ -40.f, /*train*/ -40.f);
 
     m_fader.startFadeIn();
-
+    m_endingPlayerScale = 0.85f;
+    m_endingPlayerSprite.setScale({ m_endingPlayerScale, m_endingPlayerScale });
+    m_endingPlayerSprite.setTextureRect(sf::IntRect({ 0,0 }, { Player::FRAME_W, Player::FRAME_H }));
     m_dialoguePrevActive = false;
     m_targetPitch = m_currentPitch = 1.f;
     m_targetVolume = m_currentVolume = 40.f;
@@ -72,7 +76,7 @@ void Level::setScene(int id, const sf::Texture& tex)
 
     // reset joueur
     m_player.setScale(1.f);
-
+    m_showEndingRunner = false;
     m_hasPrev = false;
     m_hasNext = false;
     m_hasTrain = false;
@@ -144,7 +148,25 @@ void Level::setScene(int id, const sf::Texture& tex)
 
         // place le player hors zone
         m_player.setPosition({ 960.f, m_groundY });
+        if (id == 99)
+        {
+            m_showEndingRunner = true;
+            m_endingDirection = 1.f;
+            m_endingAnimTimer = 0.f;
+            m_endingAnimFrame = 2;
+
+            m_endingPlayerSprite.setTextureRect(
+                sf::IntRect({ m_endingAnimFrame * Player::FRAME_W, 0 },
+                    { Player::FRAME_W, Player::FRAME_H }));
+
+            const float width = Player::FRAME_W * m_endingPlayerScale;
+            const float baseY = m_groundY - Player::FRAME_H * m_endingPlayerScale;
+            m_endingPlayerSprite.setPosition({ -width, baseY });
+        }
     }
+      
+
+rebuildEntityList();
 }
 
 // ----------------------------------------
@@ -205,7 +227,56 @@ void Level::update(float dt)
         if (m_player.getPosition().y > m_groundY) m_player.setPosition({ m_player.getPosition().x, m_groundY });
     }
 
-    for (auto& n : m_npcs) n.update(dt);
+    for (Entity* entity : m_sceneEntities)
+    {
+        if (entity == &m_player)
+            continue; // le joueur est géré plus haut
+
+        entity->update(dt);
+    }
+
+    if (m_sceneId == 99 && m_showEndingRunner)
+    {
+        const float baseY = m_groundY - Player::FRAME_H * m_endingPlayerScale;
+        const float width = Player::FRAME_W * m_endingPlayerScale;
+
+        sf::Vector2f pos = m_endingPlayerSprite.getPosition();
+        pos.x += m_endingDirection * m_endingSpeed * dt;
+        pos.y = baseY;
+        m_endingPlayerSprite.setPosition(pos);
+
+        if (m_endingDirection > 0.f && pos.x >= 1920.f)
+        {
+            m_endingDirection = -1.f;
+            m_endingAnimTimer = 0.f;
+            m_endingAnimFrame = 4;
+            m_endingPlayerSprite.setTextureRect(sf::IntRect({ m_endingAnimFrame * Player::FRAME_W, 0 },
+                { Player::FRAME_W, Player::FRAME_H }));
+            m_endingPlayerSprite.setPosition({ 1920.f, baseY });
+        }
+        else if (m_endingDirection < 0.f && (pos.x + width) <= 0.f)
+        {
+            m_endingDirection = 1.f;
+            m_endingAnimTimer = 0.f;
+            m_endingAnimFrame = 2;
+            m_endingPlayerSprite.setTextureRect(sf::IntRect({ m_endingAnimFrame * Player::FRAME_W, 0 },
+                { Player::FRAME_W, Player::FRAME_H }));
+            m_endingPlayerSprite.setPosition({ -width, baseY });
+        }
+
+        m_endingAnimTimer += dt;
+        if (m_endingAnimTimer >= 0.12f)
+        {
+            m_endingAnimTimer = 0.f;
+            if (m_endingDirection > 0.f)
+                m_endingAnimFrame = (m_endingAnimFrame == 2) ? 3 : 2;
+            else
+                m_endingAnimFrame = (m_endingAnimFrame == 4) ? 5 : 4;
+
+            m_endingPlayerSprite.setTextureRect(sf::IntRect({ m_endingAnimFrame * Player::FRAME_W, 0 },
+                { Player::FRAME_W, Player::FRAME_H }));
+        }
+    }
 
     sf::Rect<float> playerRect(m_player.getPosition(), { 32,48 });
 
@@ -329,10 +400,16 @@ void Level::draw(sf::RenderWindow& window)
     if (m_hasPrev) window.draw(m_panelPrev);
     if (m_hasNext) window.draw(m_panelNext);
 
-    for (auto& n : m_npcs) n.draw(window);
+    for (Entity* entity : m_sceneEntities)
+    {
+        if (entity == &m_player && (m_sceneId == 98 || m_sceneId == 99))
+            continue;
 
-    if (m_sceneId != 98 && m_sceneId != 99)
-        m_player.draw(window);
+        entity->draw(window);
+    }
+
+    if (m_sceneId == 99 && m_showEndingRunner)
+        window.draw(m_endingPlayerSprite);
 
     m_hintIcons.draw(window);
     m_dialogue.draw(window);
@@ -367,3 +444,18 @@ void Level::draw(sf::RenderWindow& window)
     m_fader.draw(window);
 }
 
+void Level::rebuildEntityList()
+{
+    m_sceneEntities.clear();
+    m_sceneEntities.push_back(&m_player);
+
+    for (auto& npc : m_npcs)
+        m_sceneEntities.push_back(&npc);
+
+    // TRI PAR PROFONDEUR
+    std::sort(m_sceneEntities.begin(), m_sceneEntities.end(),
+        [](Entity* a, Entity* b)
+        {
+            return a->getPosition().y < b->getPosition().y;
+        });
+}

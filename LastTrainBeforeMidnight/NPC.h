@@ -2,23 +2,25 @@
 
 #include <SFML/Graphics.hpp>
 #include <string>
+#include "Entity.h"
 
-class NPC
+class NPC : public Entity
 {
 public:
     NPC(const std::string& textureFile, const sf::Vector2f& pos);
 
-    void update(float dt);
-    void draw(sf::RenderWindow& window);
+    void update(float dt) override;
+    void draw(sf::RenderWindow& window) override;
 
     void setScale(float s);
-    sf::Vector2f getPosition() const { return m_position; }
+    sf::Vector2f getPosition() const { return Entity::getPosition(); }
+    void setPosition(const sf::Vector2f& pos) override;
+
 
 private:
     sf::Texture m_texture;
     sf::Sprite  m_sprite;
 
-    sf::Vector2f m_position;
 
     float m_animTimer = 0.f;
     int   m_currentFrame = 0;

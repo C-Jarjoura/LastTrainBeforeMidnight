@@ -9,10 +9,9 @@ public:
 
     virtual void update(float dt) = 0;
     virtual void draw(sf::RenderWindow& window) = 0;
-
-    void setPosition(const sf::Vector2f& pos) { m_position = pos; }
+    virtual void setPosition(const sf::Vector2f& pos) { m_position = pos; }
     sf::Vector2f getPosition() const { return m_position; }
 
 protected:
-    sf::Vector2f m_position;
+    sf::Vector2f m_position{};
 };

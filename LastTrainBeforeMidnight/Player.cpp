@@ -8,9 +8,8 @@ Player::Player()
     m_texture("assets/sprites/player.png"),
     m_sprite(m_texture)
 {
-    m_position = { 960.f,540.f };
-    m_lastPosition = m_position;
-    m_sprite.setPosition(m_position);
+    setPosition({ 960.f,540.f });
+    m_lastPosition = getPosition();
 
     m_sprite.setTextureRect(
         sf::IntRect(
@@ -27,9 +26,10 @@ void Player::setScale(float s)
 
 void Player::setPosition(const sf::Vector2f& pos)
 {
-    m_position = pos;
-    m_sprite.setPosition(m_position);
+    Entity::setPosition(pos);
+    m_sprite.setPosition(pos);
 }
+
 
 void Player::update(float dt)
 {
@@ -42,8 +42,9 @@ void Player::update(float dt)
     if (right) m.x += m_speed * dt;
     if (left)  m.x -= m_speed * dt;
 
-    m_position += m;
-    m_sprite.setPosition(m_position);
+    auto pos = getPosition();
+    pos += m;
+    setPosition(pos);
 
     m_animTimer += dt;
 

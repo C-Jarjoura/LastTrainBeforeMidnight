@@ -1,7 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include "Entity.h"
 
-class Player
+class Player : public Entity
 {
 public:
     static constexpr int FRAME_W = 259;
@@ -9,11 +10,11 @@ public:
 
     Player();
 
-    void update(float dt);
-    void draw(sf::RenderWindow& window);
+    void update(float dt) override;
+    void draw(sf::RenderWindow& window) override;
 
-    sf::Vector2f getPosition() const { return m_position; }
-    void setPosition(const sf::Vector2f& pos);
+    sf::Vector2f getPosition() const { return Entity::getPosition(); }
+    void setPosition(const sf::Vector2f& pos) override;
 
     // nouveau -> pour changer scale selon scène
     void setScale(float s);
