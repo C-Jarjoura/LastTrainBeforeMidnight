@@ -1,14 +1,58 @@
-# LastTrainBeforeMidnight
+# Dernier Metro Avant Minuit
+Mini-jeu narratif en C++/SFML
 
-Tu incarnes un voyageur perdu dans une station de métro abandonnée.
-À minuit, toutes les rames vont disparaître — c’est ta dernière chance de rentrer chez toi.
-Chaque quai est occupé par un personnage étrange qui prétend savoir où se trouve “le bon train”.
-Mais leurs récits se contredisent, leurs motivations sont floues… mentent-ils ? se trompent-ils ? manipulés ?
+## Pitch
+Tu es coincé sur la ligne 13.  
+Tu as 5 minutes avant que le dernier train ne parte.
 
-Tu as moins de 5 minutes pour collecter des indices, décider qui croire, et monter dans une rame.
+3 stations.  
+1 seul train est le bon.  
+Les autres bouclent la nuit encore et encore.
 
-Deux fins possibles :
+Tu dois parler aux NPC, collecter 7 indices (flags), comprendre le message crypté, et trouver le train qui mène à la sortie.
 
-tu prends le bon train → fin “réveil / retour normal”
+Sans tous les indices → boucle (retour station 1).  
+Avec tous les indices mais mauvais train → **GAME OVER** (écran noir).  
+Avec tous les indices + station gagnante → **FIN BLANCHE** (ending runner).
 
-tu prends le mauvais train → fade noir → “tu ne rentreras jamais”
+## Gameplay / Commandes
+- `A / D` → déplacement gauche / droite
+- `E` → interagir (NPC, panneaux, train)
+- `SPACE` → avancer le dialogue
+- `P` → **Pause / Reprendre**
+- `ESC` → quitter (ou, depuis Pause : retour menu)
+
+Les NPC donnent des bribes d’informations.  
+Les flags se débloquent par étapes (progression multi-étapes par scène).
+
+## Durée d’un run
+**≈ 5 minutes** (timer affiché en rouge, coin haut droit)
+
+## Structure technique / Architecture
+POO respectée, encapsulation / composition / héritage :
+
+- `Game` → **machine d’état complète**  
+  `Menu / Playing / Pause / GameOver / Ending`
+- `Level` → gestion scène / triggers / zones AABB
+- `Player` → dérive de `Entity` (classe abstraite)
+- `NPC` → dérive de `Entity`
+- `DialogueSystem` → gestion des lignes + bleep audio
+- `NpcInteraction` → gating flags, SETFLAG, étape par scène
+- `SoundBank` → pooling SFML3 (oneshots + loops)
+- `SceneNavigation` → panneaux / train
+- `ScreenFader` → fade noir / fade blanc
+
+Ending GOOD → fade blanc (runner).  
+Ending BAD → fade noir + auto-exit.
+
+## Build
+**Prérequis**
+- SFML 3.0.2
+- Visual Studio 2022
+- C++20
+- CMake ≥ 3.20
+
+**Compilation**
+```bash
+cmake -S . -B build
+cmake --build build
