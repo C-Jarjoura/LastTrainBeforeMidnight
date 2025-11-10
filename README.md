@@ -56,3 +56,4 @@ Ending BAD → fade noir + auto-exit.
 ```bash
 cmake -S . -B build
 cmake --build build
+Download Build.zip add menu.wav from assets into assets/sfx/
