@@ -11,41 +11,48 @@ Les autres bouclent la nuit encore et encore.
 
 Tu dois parler aux NPC, collecter 7 indices (flags), comprendre le message crypté, et trouver le train qui mène à la sortie.
 
-Sans tous les indices → boucle.  
-Avec tous les indices mais mauvais train → GAME OVER.  
-Avec tous les indices et bon train → FIN BLANCHE.
+Sans tous les indices → boucle (retour station 1).  
+Avec tous les indices mais mauvais train → **GAME OVER** (écran noir).  
+Avec tous les indices + station gagnante → **FIN BLANCHE** (ending runner).
 
-## Gameplay
-- `A / D` → gauche / droite
+## Gameplay / Commandes
+- `A / D` → déplacement gauche / droite
 - `E` → interagir (NPC, panneaux, train)
-- `SPACE` → avancer dans un dialogue
+- `SPACE` → avancer le dialogue
+- `P` → **Pause / Reprendre**
+- `ESC` → quitter (ou, depuis Pause : retour menu)
 
-NPC donnent des bribes d’informations, parfois mensongères.  
-Les indices se débloquent dans un ordre précis (multi flags), il faut faire des allers-retours entre les stations.
+Les NPC donnent des bribes d’informations.  
+Les flags se débloquent par étapes (progression multi-étapes par scène).
 
 ## Durée d’un run
-**≈ 5 minutes** (timer affiché en rouge en haut à droite)
+**≈ 5 minutes** (timer affiché en rouge, coin haut droit)
 
-## Structure technique
-POO respectée :
-- `Game` (machine d’état : Menu / Playing / GoodEnd / BadEnd)
-- `Level` (scènes, triggers, navigation)
-- `Player` (hérite d’IEntity abstraite → update/draw)
-- `NPC` (hérite d’IEntity)
-- `DialogueSystem` (texte narratif + sons bleep)
-- `SoundBank` (pooling SFML3)
-- `ScreenFader` (fade noir / blanc)
+## Structure technique / Architecture
+POO respectée, encapsulation / composition / héritage :
 
-Fin `GOOD` → fade blanc 
-Fin `BAD` → fade noir et écran game_over
+- `Game` → **machine d’état complète**  
+  `Menu / Playing / Pause / GameOver / Ending`
+- `Level` → gestion scène / triggers / zones AABB
+- `Player` → dérive de `Entity` (classe abstraite)
+- `NPC` → dérive de `Entity`
+- `DialogueSystem` → gestion des lignes + bleep audio
+- `NpcInteraction` → gating flags, SETFLAG, étape par scène
+- `SoundBank` → pooling SFML3 (oneshots + loops)
+- `SceneNavigation` → panneaux / train
+- `ScreenFader` → fade noir / fade blanc
+
+Ending GOOD → fade blanc (runner).  
+Ending BAD → fade noir + auto-exit.
 
 ## Build
-**Prerequis**
+**Prérequis**
 - SFML 3.0.2
 - Visual Studio 2022
-- C++17
+- C++20
+- CMake ≥ 3.20
 
 **Compilation**
 ```bash
-cmake .
-make
+cmake -S . -B build
+cmake --build build
