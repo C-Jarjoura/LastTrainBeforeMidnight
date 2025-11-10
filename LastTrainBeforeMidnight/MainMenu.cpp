@@ -15,14 +15,22 @@ MainMenu::MainMenu()
     m_highlight.setFillColor(sf::Color(255, 255, 255, 60));
     m_highlight.setSize({ 1255.f,262.f }); // valeurs relevées
 
+    // *** ORIGIN AU CENTRE -> pour que le SCALE reste CENTRE ***
+    auto b = m_highlight.getLocalBounds();
+    m_highlight.setOrigin({ b.size.x * 0.5f, b.size.y * 0.5f });
+
+
     updateHighlight();
 }
 
 void MainMenu::updateHighlight()
 {
     float baseX = 333.f;
-    float y = (m_selected == 0) ? 182.f : 504.f; // jouer / quitter
-    m_highlight.setPosition({ baseX, y });
+    float y = (m_selected == 0) ? 220.f : 504.f; // jouer / quitter
+
+    // ici maintenant on place le CENTRE du rectangle !
+    m_highlight.setPosition({ baseX + 1255.f * 0.5f, y + 262.f * 0.5f });
+
 }
 
 int MainMenu::update(float dt)
