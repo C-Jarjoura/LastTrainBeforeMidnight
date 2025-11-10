@@ -1,14 +1,51 @@
-# LastTrainBeforeMidnight
+# Dernier Metro Avant Minuit
+Mini-jeu narratif en C++/SFML
 
-Tu incarnes un voyageur perdu dans une station de métro abandonnée.
-À minuit, toutes les rames vont disparaître — c’est ta dernière chance de rentrer chez toi.
-Chaque quai est occupé par un personnage étrange qui prétend savoir où se trouve “le bon train”.
-Mais leurs récits se contredisent, leurs motivations sont floues… mentent-ils ? se trompent-ils ? manipulés ?
+## Pitch
+Tu es coincé sur la ligne 13.  
+Tu as 5 minutes avant que le dernier train ne parte.
 
-Tu as moins de 5 minutes pour collecter des indices, décider qui croire, et monter dans une rame.
+3 stations.  
+1 seul train est le bon.  
+Les autres bouclent la nuit encore et encore.
 
-Deux fins possibles :
+Tu dois parler aux NPC, collecter 7 indices (flags), comprendre le message crypté, et trouver le train qui mène à la sortie.
 
-tu prends le bon train → fin “réveil / retour normal”
+Sans tous les indices → boucle.  
+Avec tous les indices mais mauvais train → GAME OVER.  
+Avec tous les indices et bon train → FIN BLANCHE.
 
-tu prends le mauvais train → fade noir → “tu ne rentreras jamais”
+## Gameplay
+- `A / D` → gauche / droite
+- `E` → interagir (NPC, panneaux, train)
+- `SPACE` → avancer dans un dialogue
+
+NPC donnent des bribes d’informations, parfois mensongères.  
+Les indices se débloquent dans un ordre précis (multi flags), il faut faire des allers-retours entre les stations.
+
+## Durée d’un run
+**≈ 5 minutes** (timer affiché en rouge en haut à droite)
+
+## Structure technique
+POO respectée :
+- `Game` (machine d’état : Menu / Playing / GoodEnd / BadEnd)
+- `Level` (scènes, triggers, navigation)
+- `Player` (hérite d’IEntity abstraite → update/draw)
+- `NPC` (hérite d’IEntity)
+- `DialogueSystem` (texte narratif + sons bleep)
+- `SoundBank` (pooling SFML3)
+- `ScreenFader` (fade noir / blanc)
+
+Fin `GOOD` → fade blanc + auto-walk du joueur (loop gauche/droite)
+Fin `BAD` → fade noir et écran game_over
+
+## Build
+**Prerequis**
+- SFML 3.0.2
+- Visual Studio 2022
+- C++17
+
+**Compilation**
+```bash
+cmake .
+make
