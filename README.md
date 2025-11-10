@@ -20,7 +20,7 @@ Avec tous les indices + station gagnante → **FIN BLANCHE** (ending runner).
 - `E` → interagir (NPC, panneaux, train)
 - `SPACE` → avancer le dialogue
 - `P` → **Pause / Reprendre**
-- `ESC` → quitter (ou, depuis Pause : retour menu)
+- `ESC` → quitter 
 
 Les NPC donnent des bribes d’informations.  
 Les flags se débloquent par étapes (progression multi-étapes par scène).
@@ -49,7 +49,7 @@ Ending BAD → fade noir + auto-exit.
 **Prérequis**
 - SFML 3.0.2
 - Visual Studio 2022
-- C++20
+- C++17
 - CMake ≥ 3.20
 
 **Compilation**
