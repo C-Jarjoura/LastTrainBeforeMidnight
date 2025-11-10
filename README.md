@@ -16,7 +16,7 @@ Avec tous les indices mais mauvais train → **GAME OVER** (écran noir).
 Avec tous les indices + station gagnante → **FIN BLANCHE** (ending runner).
 
 ## Gameplay / Commandes
-- `A / D` → déplacement gauche / droite
+- `Q / D` → déplacement gauche / droite
 - `E` → interagir (NPC, panneaux, train)
 - `SPACE` → avancer le dialogue
 - `P` → **Pause / Reprendre**
