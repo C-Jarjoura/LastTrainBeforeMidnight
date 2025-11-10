@@ -36,7 +36,7 @@ POO respectée :
 - `SoundBank` (pooling SFML3)
 - `ScreenFader` (fade noir / blanc)
 
-Fin `GOOD` → fade blanc + auto-walk du joueur (loop gauche/droite)
+Fin `GOOD` → fade blanc 
 Fin `BAD` → fade noir et écran game_over
 
 ## Build
