@@ -20,6 +20,9 @@ Game::Game()
 {
     gSound = &m_sound;
 
+    // Charger la police pour l’overlay Pause (facultatif)
+    m_hasFont = m_font.openFromFile("assets/fonts/arial.ttf");
+
     // SFX UI menu
     m_sound.load("menu_move", "assets/sfx/menu_move.wav");
     m_sound.load("menu_enter", "assets/sfx/menu_enter.wav");
@@ -46,18 +49,25 @@ Game::Game()
                 m_sceneEndTex = sf::Texture(SCENE_END);
                 m_level.setScene(id, m_sceneEndTex);
                 m_currentScene = 99;
+                // passer en état Ending (machine d’états côté Game)
+                m_state = GameState::Ending;
             }
             else if (id == 98) // GAME OVER
             {
                 m_sceneEndTex = sf::Texture(SCENE_GAMEOVER);
                 m_level.setScene(id, m_sceneEndTex);
                 m_currentScene = 98;
+                // passer en état GameOver
+                m_state = GameState::GameOver;
             }
             else
             {
                 loadSceneTexture(id, m_sceneTex);
                 m_level.setScene(id, m_sceneTex);
                 m_currentScene = id;
+                // si on revient sur une scène normale, on s’assure d’être en Playing
+                if (m_state != GameState::Menu)
+                    m_state = GameState::Playing;
             }
         };
 
@@ -95,7 +105,19 @@ void Game::processEvents()
         if (const auto* key = ev->getIf<sf::Event::KeyPressed>())
         {
             if (key->scancode == sf::Keyboard::Scancode::Escape)
-                m_window.close();
+            {
+                // En Pause : Escape ramène au Menu
+                if (m_state == GameState::Pause)
+                {
+                    m_state = GameState::Menu;
+                    // Remettre la musique un peu plus forte pour le menu
+                    g_pendingSceneVolume = 60.f;
+                }
+                else
+                {
+                    m_window.close();
+                }
+            }
         }
     }
 }
@@ -123,13 +145,34 @@ void Game::update(float dt)
         }
     }
 
+    // Gestion Pause (edge sur touche P)
+    {
+        static bool prevPause = false;
+        bool pauseNow = sf::Keyboard::isKeyPressed(sf::Keyboard::Scancode::P);
+
+        if (pauseNow && !prevPause)
+        {
+            if (m_state == GameState::Playing)
+            {
+                m_state = GameState::Pause;
+                g_pendingSceneVolume = 15.f; // baisser un peu en pause
+            }
+            else if (m_state == GameState::Pause)
+            {
+                m_state = GameState::Playing;
+                g_pendingSceneVolume = 30.f; // revenir au volume gameplay
+            }
+        }
+        prevPause = pauseNow;
+    }
+
     // statiques pour endings
     static float overTimer = 4.f;   // game over auto-exit
     static bool  winVolumeSet = false;
 
     // reset quand on n'est pas sur l'écran correspondant
-    if (m_currentScene != 98) overTimer = 4.f;
-    if (m_currentScene != 99) winVolumeSet = false;
+    if (m_state != GameState::GameOver) overTimer = 4.f;
+    if (m_state != GameState::Ending)   winVolumeSet = false;
 
     if (m_state == GameState::Menu)
     {
@@ -159,12 +202,20 @@ void Game::update(float dt)
         return;
     }
 
-    // --- jeu ---
-    m_level.update(dt);
-
-    // --- GAME OVER (98) : fade audio vers 0 puis fermeture fenêtre après 4 sec ---
-    if (m_currentScene == 98)
+    // --- jeu / pause / fins ---
+    if (m_state == GameState::Playing)
     {
+        m_level.update(dt);
+    }
+    else if (m_state == GameState::Pause)
+    {
+        // on ne met pas à jour le Level (freeze)
+    }
+    else if (m_state == GameState::GameOver)
+    {
+        // laisser Level tourner (il gère l’affichage de l’écran 98)
+        m_level.update(dt);
+
         overTimer -= dt;
 
         if (gMusic)
@@ -181,10 +232,11 @@ void Game::update(float dt)
             return;
         }
     }
-
-    // --- GOOD END (99) : baisse du volume mais la musique continue ---
-    if (m_currentScene == 99)
+    else if (m_state == GameState::Ending)
     {
+        // laisser Level tourner (runner + écran 99)
+        m_level.update(dt);
+
         if (gMusic && !winVolumeSet)
         {
             if (gMusic->getStatus() != sf::SoundSource::Status::Playing)
@@ -206,9 +258,40 @@ void Game::render()
     m_window.clear();
 
     if (m_state == GameState::Menu)
+    {
         m_menu.draw(m_window);
+    }
     else
+    {
+        // Pour Playing / Pause / GameOver / Ending : c’est Level qui dessine
         m_level.draw(m_window);
+
+        // Overlay Pause
+        if (m_state == GameState::Pause)
+        {
+            // fond semi-opaque
+            sf::RectangleShape overlay;
+            overlay.setSize({ 1920.f,1080.f });
+            overlay.setFillColor(sf::Color(0, 0, 0, 120));
+            m_window.draw(overlay);
+
+            if (m_hasFont)
+            {
+                sf::Text txt(m_font, "Pause\n(P pour reprendre)", 42);
+                auto b = txt.getLocalBounds();
+                txt.setOrigin({ b.size.x * 0.5f, b.size.y * 0.5f });
+                txt.setPosition({ 960.f, 540.f });
+                txt.setFillColor(sf::Color::White);
+
+                // légère ombre
+                sf::Text sh = txt;
+                sh.setFillColor(sf::Color(0, 0, 0, 150));
+                sh.setPosition({ 962.f, 542.f });
+                m_window.draw(sh);
+                m_window.draw(txt);
+            }
+        }
+    }
 
     m_window.display();
 }

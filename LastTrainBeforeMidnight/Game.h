@@ -21,7 +21,10 @@ private:
     enum class GameState
     {
         Menu,
-        Playing
+        Playing,
+        Pause,
+        GameOver,
+        Ending
     };
 
 private:
@@ -40,4 +43,8 @@ private:
     SoundBank m_sound;
 
     sf::Music m_music;
+
+    // Overlay Pause
+    sf::Font  m_font;
+    bool      m_hasFont = false;
 };
